@@ -1,2 +1,4 @@
 # lightsaber-web-bluetooth
-Web-bluetooth experimentation.
+
+Try it: http://profezzorn.github.io/lightsaber-web-bluetooth/
+
