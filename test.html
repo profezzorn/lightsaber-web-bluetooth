@@ -4,7 +4,7 @@
 
 <script>
 
-function handleNotification(event) {
+function OnRX(event) {
   let value = event.target.value;
   let a = [];
   for (let i = 0; i < value.byteLength; i++) {
@@ -26,9 +26,11 @@ async function Run() {
 
   console.log('Connecting to GATT Server...');
   const server = await device.gatt.connect();
+  console.log(server)
 
   console.log('Getting Service...');
   const service = await server.getPrimaryService(serviceUuid);
+  console.log(service)
 
   console.log('Getting Characteristics...');
   const rx = await service.getCharacteristics(rxUuid);
@@ -57,7 +59,7 @@ async function Run() {
   console.log('> Writable Auxiliaries: ' + tx.properties.writableAuxiliaries);
 
   await rx.StartNotifications();
-  rx.addEventListener('characteristicvaluechanged', handleNotification);
+  rx.addEventListener('characteristicvaluechanged', OnRX);
 }
 
 </script>
