@@ -4,6 +4,16 @@
 
 <script>
 
+function handleNotification(event) {
+  let value = event.target.value;
+  let a = [];
+  for (let i = 0; i < value.byteLength; i++) {
+    a.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
+  }
+  console.log('> ' + a.join(' '));
+  console.log('> ' + value);
+}
+
 async function Run() {
   let serviceUuid = '713d0000-503e-4c75-ba94-3148f18d941e';
   let rxUuid = '713d0002-503e-4c75-ba94-3148f18d941e';
@@ -22,8 +32,7 @@ async function Run() {
 
   console.log('Getting Characteristics...');
   const rx = await service.getCharacteristics(rxUuid);
-  const tx = await service.getCharacteristics(txUuid);
-
+  console.log(rx);
   console.log('> Rx UUID:  ' + rx.uuid);
   console.log('> Broadcast:            ' + rx.properties.broadcast);
   console.log('> Read:                 ' + rx.properties.read);
@@ -35,6 +44,7 @@ async function Run() {
   console.log('> Queued Write:         ' + rx.properties.reliableWrite);
   console.log('> Writable Auxiliaries: ' + rx.properties.writableAuxiliaries);
 
+  const tx = await service.getCharacteristics(txUuid);
   console.log('> Tx UUID:  ' + tx.uuid);
   console.log('> Broadcast:            ' + tx.properties.broadcast);
   console.log('> Read:                 ' + tx.properties.read);
@@ -50,14 +60,6 @@ async function Run() {
   rx.addEventListener('characteristicvaluechanged', handleNotification);
 }
 
-function handleNotification(event) {
-  let value = event.target.value;
-  let a = [];
-  for (let i = 0; i < value.byteLength; i++) {
-    a.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
-  }
-  console.log('> ' + a.join(' '));
-}
 </script>
 
 <button type=button onclick='Run()'>Connect</button>
