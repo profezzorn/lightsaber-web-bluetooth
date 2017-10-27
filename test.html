@@ -21,8 +21,8 @@ async function Run() {
   const service = await server.getPrimaryService(serviceUuid);
 
   console.log('Getting Characteristics...');
-  const rx = await service.getRx(rxUuid);
-  const tx = await service.getRx(txUuid);
+  const rx = await service.getCharacteristics(rxUuid);
+  const tx = await service.getCharacteristics(txUuid);
 
   console.log('> Rx UUID:  ' + rx.uuid);
   console.log('> Broadcast:            ' + rx.properties.broadcast);
@@ -45,6 +45,18 @@ async function Run() {
   console.log('> Signed Write:         ' + tx.properties.authenticatedSignedWrites);
   console.log('> Queued Write:         ' + tx.properties.reliableWrite);
   console.log('> Writable Auxiliaries: ' + tx.properties.writableAuxiliaries);
+
+  await rx.StartNotifications();
+  rx.addEventListener('characteristicvaluechanged', handleNotification);
+}
+
+function handleNotification(event) {
+  let value = event.target.value;
+  let a = [];
+  for (let i = 0; i < value.byteLength; i++) {
+    a.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
+  }
+  console.log('> ' + a.join(' '));
 }
 </script>
 
