@@ -58,7 +58,7 @@ async function Run() {
   console.log('> Queued Write:         ' + tx.properties.reliableWrite);
   console.log('> Writable Auxiliaries: ' + tx.properties.writableAuxiliaries);
 
-  await rx.StartNotifications();
+  await rx.startNotifications();
   rx.addEventListener('characteristicvaluechanged', OnRX);
 }
 
