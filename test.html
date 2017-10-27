@@ -4,6 +4,9 @@
 
 <script>
 
+var rx;
+var tx;
+
 function OnRX(event) {
   let value = event.target.value;
   let a = [];
@@ -14,6 +17,10 @@ function OnRX(event) {
   }
   console.log('> ' + a.join(' '));
   console.log('> ' + b);
+}
+
+function Send() {
+  tx.writeValue(document.getElementById('textField').value);
 }
 
 async function Run() {
@@ -35,7 +42,7 @@ async function Run() {
   console.log(service)
 
   console.log('Getting Characteristics...');
-  const rx = await service.getCharacteristic(rxUuid);
+  rx = await service.getCharacteristic(rxUuid);
   console.log(rx);
   console.log('> Rx UUID:  ' + rx.uuid);
   console.log('> Broadcast:            ' + rx.properties.broadcast);
@@ -48,7 +55,7 @@ async function Run() {
   console.log('> Queued Write:         ' + rx.properties.reliableWrite);
   console.log('> Writable Auxiliaries: ' + rx.properties.writableAuxiliaries);
 
-  const tx = await service.getCharacteristic(txUuid);
+  tx = await service.getCharacteristic(txUuid);
   console.log('> Tx UUID:  ' + tx.uuid);
   console.log('> Broadcast:            ' + tx.properties.broadcast);
   console.log('> Read:                 ' + tx.properties.read);
@@ -67,5 +74,7 @@ async function Run() {
 </script>
 
 <button type=button onclick='Run()'>Connect</button>
+<br>
+<input type=text id=textField onkeydown = "if (event.keyCode == 13) Send();">
 </body>
 
