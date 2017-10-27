@@ -33,7 +33,7 @@ async function Run() {
   console.log(service)
 
   console.log('Getting Characteristics...');
-  const rx = await service.getCharacteristics(rxUuid);
+  const rx = await service.getCharacteristic(rxUuid);
   console.log(rx);
   console.log('> Rx UUID:  ' + rx.uuid);
   console.log('> Broadcast:            ' + rx.properties.broadcast);
@@ -46,7 +46,7 @@ async function Run() {
   console.log('> Queued Write:         ' + rx.properties.reliableWrite);
   console.log('> Writable Auxiliaries: ' + rx.properties.writableAuxiliaries);
 
-  const tx = await service.getCharacteristics(txUuid);
+  const tx = await service.getCharacteristic(txUuid);
   console.log('> Tx UUID:  ' + tx.uuid);
   console.log('> Broadcast:            ' + tx.properties.broadcast);
   console.log('> Read:                 ' + tx.properties.read);
