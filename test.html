@@ -6,7 +6,8 @@
 
 async function Run() {
   let serviceUuid = '713d0000-503e-4c75-ba94-3148f18d941e';
-  let characteristicUuid = '713d0002-503e-4c75-ba94-3148f18d941e';
+  let rxUuid = '713d0002-503e-4c75-ba94-3148f18d941e';
+  let txUuid = '713d0003-503e-4c75-ba94-3148f18d941e';
 
   console.log('Requesting Bluetooth Device...');
   const device = await navigator.bluetooth.requestDevice({
@@ -19,22 +20,31 @@ async function Run() {
   console.log('Getting Service...');
   const service = await server.getPrimaryService(serviceUuid);
 
-  console.log('Getting Characteristic...');
-  const characteristic = await service.getCharacteristic(characteristicUuid);
+  console.log('Getting Characteristics...');
+  const rx = await service.getRx(rxUuid);
+  const tx = await service.getRx(txUuid);
 
-  console.log('> Characteristic UUID:  ' + characteristic.uuid);
-  console.log('> Broadcast:            ' + characteristic.properties.broadcast);
-  console.log('> Read:                 ' + characteristic.properties.read);
-  console.log('> Write w/o response:   ' +
-  characteristic.properties.writeWithoutResponse);
-  console.log('> Write:                ' + characteristic.properties.write);
-  console.log('> Notify:               ' + characteristic.properties.notify);
-  console.log('> Indicate:             ' + characteristic.properties.indicate);
-  console.log('> Signed Write:         ' +
-  characteristic.properties.authenticatedSignedWrites);
-  console.log('> Queued Write:         ' + characteristic.properties.reliableWrite);
-  console.log('> Writable Auxiliaries: ' +
-  characteristic.properties.writableAuxiliaries);
+  console.log('> Rx UUID:  ' + rx.uuid);
+  console.log('> Broadcast:            ' + rx.properties.broadcast);
+  console.log('> Read:                 ' + rx.properties.read);
+  console.log('> Write w/o response:   ' + rx.properties.writeWithoutResponse);
+  console.log('> Write:                ' + rx.properties.write);
+  console.log('> Notify:               ' + rx.properties.notify);
+  console.log('> Indicate:             ' + rx.properties.indicate);
+  console.log('> Signed Write:         ' + rx.properties.authenticatedSignedWrites);
+  console.log('> Queued Write:         ' + rx.properties.reliableWrite);
+  console.log('> Writable Auxiliaries: ' + rx.properties.writableAuxiliaries);
+
+  console.log('> Tx UUID:  ' + tx.uuid);
+  console.log('> Broadcast:            ' + tx.properties.broadcast);
+  console.log('> Read:                 ' + tx.properties.read);
+  console.log('> Write w/o response:   ' + tx.properties.writeWithoutResponse);
+  console.log('> Write:                ' + tx.properties.write);
+  console.log('> Notify:               ' + tx.properties.notify);
+  console.log('> Indicate:             ' + tx.properties.indicate);
+  console.log('> Signed Write:         ' + tx.properties.authenticatedSignedWrites);
+  console.log('> Queued Write:         ' + tx.properties.reliableWrite);
+  console.log('> Writable Auxiliaries: ' + tx.properties.writableAuxiliaries);
 }
 </script>
 
