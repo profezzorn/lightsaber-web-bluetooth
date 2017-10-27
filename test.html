@@ -1,1 +1,41 @@
-<H2>This is a test of the mergency broadcast WEB BLUETOOTH SYSTEM</h2>
+<body>
+  <H2>This is a test of the emergency broadcast WEB BLUETOOTH SYSTEM</h2>
+
+
+<script>
+async function onButtonClick() {
+  let serviceUuid = '713d0000-503e-4c75-ba94-3148f18d941e';
+  let characteristicUuid = '713d0002-503e-4c75-ba94-3148f18d941e';
+
+  console.log('Requesting Bluetooth Device...');
+  const device = await navigator.bluetooth.requestDevice({
+     filters: [{services: [serviceUuid]}]
+  });
+
+  console.log('Connecting to GATT Server...');
+  const server = await device.gatt.connect();
+
+  console.log('Getting Service...');
+  const service = await server.getPrimaryService(serviceUuid);
+
+  console.log('Getting Characteristic...');
+  const characteristic = await service.getCharacteristic(characteristicUuid);
+
+  console.log('> Characteristic UUID:  ' + characteristic.uuid);
+  console.log('> Broadcast:            ' + characteristic.properties.broadcast);
+  console.log('> Read:                 ' + characteristic.properties.read);
+  console.log('> Write w/o response:   ' +
+  characteristic.properties.writeWithoutResponse);
+  console.log('> Write:                ' + characteristic.properties.write);
+  console.log('> Notify:               ' + characteristic.properties.notify);
+  console.log('> Indicate:             ' + characteristic.properties.indicate);
+  console.log('> Signed Write:         ' +
+  characteristic.properties.authenticatedSignedWrites);
+  console.log('> Queued Write:         ' + characteristic.properties.reliableWrite);
+  console.log('> Writable Auxiliaries: ' +
+  characteristic.properties.writableAuxiliaries);
+}
+
+</script>
+</body>
+
