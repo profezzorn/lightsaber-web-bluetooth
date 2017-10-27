@@ -20,7 +20,10 @@ function OnRX(event) {
 }
 
 function Send() {
-  tx.writeValue(document.getElementById('textField').value);
+  var value = document.getElementById('textField').value;
+  document.getElementById('textField').value = "";
+  let encoder = new TextEncoder('utf-8');
+  tx.writeValue(encoder.encode(value));
 }
 
 async function Run() {
