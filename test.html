@@ -13,11 +13,11 @@ function OnRX(event) {
   var data = new TextDecoder().decode(event.target.value);
   buffer += data;
   var tmp = buffer.split("-+=END_OUTPUT=+-");
-  if (len(tmp)) {
+  if (tmp.length > 1) {
     buffer = tmp[1];
     var ret = tmp[0];
     tmp = ret.split("-+=BEGIN_OUTPUT=+-");
-    if (len(tmp)) ret = tmp[1];
+    if (tmp.length > 1) ret = tmp[1];
     console.log('> ' + ret);
   }
 }
