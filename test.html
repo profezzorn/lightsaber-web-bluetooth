@@ -7,16 +7,19 @@
 var rx;
 var tx;
 
+var buffer = "";
+
 function OnRX(event) {
-  let value = event.target.value;
-  let a = [];
-  let b = "";
-  for (let i = 0; i < value.byteLength; i++) {
-    a.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
-    b += String.fromCharCode(value.getUint8(i));
+  var data = new TextDecoder().decode(event.target.value);
+  buffer += data;
+  var tmp = buffer.split("-+=END_OUTPUT=+-");
+  if (len(tmp)) {
+    buffer = tmp[1];
+    var ret = tmp[0];
+    tmp = ret.split("-+=BEGIN_OUTPUT=+-");
+    if (len(tmp)) ret = tmp[1];
+    console.log('> ' + ret);
   }
-  console.log('> ' + a.join(' '));
-  console.log('> ' + b);
 }
 
 function Send() {
