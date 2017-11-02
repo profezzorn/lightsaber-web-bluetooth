@@ -92,7 +92,7 @@ async function Run() {
 
   var preset;
   var presets = [];
-  foreach (line in await Send("list_presets").split("\n")) {
+  for (line in await Send("list_presets").split("\n")) {
     var tmp = line.split("=");
     if (tmp.length > 1) {
       if (tmp[0] == "FONT") {
