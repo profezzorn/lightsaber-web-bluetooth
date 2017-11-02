@@ -95,6 +95,7 @@ async function Run() {
   const preset_string = await Send("list_presets");
   for (line in preset_string.split("\n")) {
     var tmp = line.split("=");
+    console.log(tmp);
     if (tmp.length > 1) {
       if (tmp[0] == "FONT") {
         if (preset) presets.append(preset);
