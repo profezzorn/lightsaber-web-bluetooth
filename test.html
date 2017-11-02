@@ -6,6 +6,7 @@
 
 var rx;
 var tx;
+var cb;
 
 var buffer = "";
 
@@ -19,14 +20,26 @@ function OnRX(event) {
     tmp = ret.split("-+=BEGIN_OUTPUT=+-");
     if (tmp.length > 1) ret = tmp[1];
     console.log('> ' + ret);
+    cb(ret);
   }
 }
 
-function Send() {
+function Send(cmd) {
+  return new Promise(function(resolve, reject) {
+    cb = resolve;
+    tx.writeValue(cmd);
+  });
+}
+
+function SendField() {
   var value = document.getElementById('textField').value + '\n';
   document.getElementById('textField').value = "";
   let encoder = new TextEncoder('utf-8');
   tx.writeValue(encoder.encode(value));
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function Run() {
@@ -49,6 +62,7 @@ async function Run() {
 
   console.log('Getting Characteristics...');
   rx = await service.getCharacteristic(rxUuid);
+  tx = await service.getCharacteristic(txUuid);
   console.log(rx);
   console.log('> Rx UUID:  ' + rx.uuid);
   console.log('> Broadcast:            ' + rx.properties.broadcast);
@@ -61,7 +75,6 @@ async function Run() {
   console.log('> Queued Write:         ' + rx.properties.reliableWrite);
   console.log('> Writable Auxiliaries: ' + rx.properties.writableAuxiliaries);
 
-  tx = await service.getCharacteristic(txUuid);
   console.log('> Tx UUID:  ' + tx.uuid);
   console.log('> Broadcast:            ' + tx.properties.broadcast);
   console.log('> Read:                 ' + tx.properties.read);
@@ -75,12 +88,19 @@ async function Run() {
 
   await rx.startNotifications();
   rx.addEventListener('characteristicvaluechanged', OnRX);
+
+  while (true) {
+    const voltage = await Send("battery_voltage");
+    document.getElementById('voltage').innerHTML = voltage;
+    await sleep(5000);
+  }
 }
 
 </script>
 
 <button type=button onclick='Run()'>Connect</button>
 <br>
-<input type=text id=textField onkeydown = "if (event.keyCode == 13) Send();">
+<input type=text id=textField onkeydown = "if (event.keyCode == 13) SendField();"><br>
+Voltage: <span id='volts'>--.--</>
 </body>
 
