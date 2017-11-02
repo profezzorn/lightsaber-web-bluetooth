@@ -93,8 +93,9 @@ async function Run() {
   var preset;
   var presets = [];
   const preset_string = await Send("list_presets");
-  for (line in preset_string.split("\n")) {
-    var tmp = line.split("=");
+  const lines = preset_string.split("\n");
+  for (int l =0; l < lines.length; l++) {
+    var tmp = lines[l].split("=");
     console.log(tmp);
     if (tmp.length > 1) {
       if (tmp[0] == "FONT") {
