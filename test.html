@@ -27,7 +27,7 @@ function OnRX(event) {
 function Send(cmd) {
   return new Promise(function(resolve, reject) {
     cb = resolve;
-    tx.writeValue(cmd);
+    tx.writeValue(new TextEncoder('utf-8').encode(cmd));
   });
 }
 
