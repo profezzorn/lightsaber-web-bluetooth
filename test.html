@@ -25,9 +25,10 @@ function OnRX(event) {
 }
 
 function Send(cmd) {
+  // needs to fail on timeout
   return new Promise(function(resolve, reject) {
     cb = resolve;
-    tx.writeValue(new TextEncoder('utf-8').encode(cmd));
+    tx.writeValue(new TextEncoder('utf-8').encode(cmd + '\n'));
   });
 }
 
