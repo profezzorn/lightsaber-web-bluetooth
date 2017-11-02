@@ -99,7 +99,7 @@ async function Run() {
     console.log(tmp);
     if (tmp.length > 1) {
       if (tmp[0] == "FONT") {
-        if (preset) presets.append(preset);
+        if (preset) presets.push(preset);
         preset = {}
       }
       preset[tmp[0]] = tmp.slice(1).join("=");
