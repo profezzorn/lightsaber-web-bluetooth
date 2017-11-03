@@ -108,6 +108,15 @@ async function Run() {
 
   console.log(presets);
 
+  preset_string = "";
+  for (var i = 0; i < presets.length; i++) {
+    var p = presets[i];
+    preset_string += "<span onclick='SetPreset(" + i + ")'>";
+    preset_string += p;
+    preset_string += "</span>";
+  }
+  document.getElementById('presets').innerHTML = preset_string;
+
   while (true) {
     const voltage = await Send("battery_voltage");
     document.getElementById('voltage').innerHTML = voltage;
@@ -122,5 +131,7 @@ async function Run() {
 <br>
 <input type=text id=textField onkeydown = "if (event.keyCode == 13) SendField();"><br>
 Voltage: <span id=voltage>---</span>
+<span id=presets>
+</span>
 </body>
 
