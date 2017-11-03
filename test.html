@@ -92,7 +92,7 @@ async function Run() {
 
   var preset;
   var presets = [];
-  const preset_string = await Send("list_presets");
+  var preset_string = await Send("list_presets");
   const lines = preset_string.split("\n");
   for (var l = 0; l < lines.length; l++) {
     var tmp = lines[l].split("=");
