@@ -120,7 +120,7 @@ async function Run() {
   for (var i = 0; i < presets.length; i++) {
     var p = presets[i];
     preset_string += "<span onclick='SetPreset(" + i + ")'>";
-    preset_string += "<font size=+2 style=font-family:StarJedi>" + p.NAME + "</font>";
+    preset_string += "<font size=+2 style=font-family:StarJedi>" + p.NAME.replace("\n", "<br>") + "</font>";
     preset_string += "</span><br>";
   }
   document.getElementById('presets').innerHTML = preset_string;
