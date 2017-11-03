@@ -40,6 +40,10 @@ function Send(cmd) {
   });
 }
 
+async function SetPreset(n) {
+  return Send("set_preset " + n);
+}
+
 function SendField() {
   var value = document.getElementById('textField').value + '\n';
   document.getElementById('textField').value = "";
@@ -138,7 +142,7 @@ async function Run() {
 <button type=button onclick='Run()'>Connect</button>
 <br>
 <input type=text id=textField onkeydown = "if (event.keyCode == 13) SendField();"><br>
-Voltage: <span id=voltage>---</span>
+Voltage: <span id=voltage>---</span><br>
 <span id=presets>
 </span>
 </body>
