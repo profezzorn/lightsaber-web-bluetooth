@@ -9,11 +9,12 @@
   border-radius: 15px 50px;
   border: 2px solid #6060aa;
   background: #101040;
-  color: #AAAAFF;
+  color: #FFFFFF;
   width: 250px;
   height: 80px;
   text-align: center;
   margin: 3px;
+  padding: 3px;
 }
 
 .title {
@@ -32,9 +33,14 @@
 
 var rx;
 var tx;
-var cb;
+
+var send_queue = [];
 
 var buffer = "";
+
+function SendNext() {
+  tx.writeValue(new TextEncoder('utf-8').encode(send_queue[0][0] + '\n'));
+}
 
 function OnRX(event) {
   var data = new TextDecoder().decode(event.target.value);
@@ -46,15 +52,17 @@ function OnRX(event) {
     tmp = ret.split("-+=BEGIN_OUTPUT=+-");
     if (tmp.length > 1) ret = tmp[1];
     console.log('> ' + ret);
-    cb(ret);
+    send_queue[0][1](ret);
+    send_queue = send_queue.slice(1);
+    if (send_queue.length > 0) SendNext();
   }
 }
 
 function Send(cmd) {
   // needs to fail on timeout
   return new Promise(function(resolve, reject) {
-    cb = resolve;
-    tx.writeValue(new TextEncoder('utf-8').encode(cmd + '\n'));
+    send_queue.push( [cmd, resolve] );
+    if (send_queue.length == 1) SendNext();
   });
 }
 
