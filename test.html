@@ -89,7 +89,7 @@ async function Run() {
 
   console.log('Requesting Bluetooth Device...');
   const device = await navigator.bluetooth.requestDevice({
-     filters: [{services: [serviceUuid]}]
+//     filters: [{services: [serviceUuid]}]
   });
 
   console.log('Connecting to GATT Server...');
