@@ -82,15 +82,16 @@ function sleep(ms) {
 }
 
 async function Run() {
-//  let serviceUuid = '713d0000-503e-4c75-ba94-3148f18d941e';
-    let serviceUuid = '1e948df1-4831-94ba-754c-3e5000003d71';
+  let serviceUuid = '713d0000-503e-4c75-ba94-3148f18d941e';
+//    let serviceUuid = '1e948df1-4831-94ba-754c-3e5000003d71';
   let rxUuid = '713d0002-503e-4c75-ba94-3148f18d941e';
   let txUuid = '713d0003-503e-4c75-ba94-3148f18d941e';
 
   console.log('Requesting Bluetooth Device...');
   const device = await navigator.bluetooth.requestDevice({
-       acceptAllDevices: true,
-//     filters: [{services: [serviceUuid]}]
+//       acceptAllDevices: true,
+//     optionalServices: [serviceUuid]
+     filters: [{services: [serviceUuid]}]
   });
 
   console.log('Connecting to GATT Server...');
