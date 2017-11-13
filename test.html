@@ -24,17 +24,20 @@
 }
 
 </style>	    
+<script src=sha1.js></script>
 </head>
 <body>
   <H2>This is a test of the emergency broadcast WEB BLUETOOTH SYSTEM</h2>
-
 
 <script>
 
 var rx;
 var tx;
+var pw;
+var status;
 
 var send_queue = [];
+var status_cb;
 
 var buffer = "";
 
@@ -66,6 +69,24 @@ function Send(cmd) {
   });
 }
 
+function OnStatus(event) {
+  console.log("ONSTATUS");
+  var data = new TextDecoder().decode(event.target.value);
+  console.log('STATUS> ' + data);
+  if (status_cb) {
+     status_cb(data);
+     status_cb = 0;
+  }
+}
+
+function SendPW(password) {
+  // needs to fail on timeout
+  return new Promise(function(resolve, reject) {
+    status_cb = resolve;
+    pw.writeValue(new TextEncoder('utf-8').encode(password));
+  });
+}
+
 async function SetPreset(n) {
   return Send("set_preset " + n);
 }
@@ -81,17 +102,31 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function dumpChar(c) {
+  console.log('> UUID:                 ' + c.uuid);
+  console.log('> Broadcast:            ' + c.properties.broadcast);
+  console.log('> Read:                 ' + c.properties.read);
+  console.log('> Write w/o response:   ' + c.properties.writeWithoutResponse);
+  console.log('> Write:                ' + c.properties.write);
+  console.log('> Notify:               ' + c.properties.notify);
+  console.log('> Indicate:             ' + c.properties.indicate);
+  console.log('> Signed Write:         ' + c.properties.authenticatedSignedWrites);
+  console.log('> Queued Write:         ' + c.properties.reliableWrite);
+  console.log('> Writable Auxiliaries: ' + c.properties.writableAuxiliaries);
+}
+
 async function Run() {
-  let serviceUuid = '713d0000-503e-4c75-ba94-3148f18d941e';
-//    let serviceUuid = '1e948df1-4831-94ba-754c-3e5000003d71';
-  let rxUuid = '713d0002-503e-4c75-ba94-3148f18d941e';
-  let txUuid = '713d0003-503e-4c75-ba94-3148f18d941e';
+  let serviceUuid = '713d0000-389c-f637-b1d7-91b361ae7678';
+  let rxUuid = '713d0002-389c-f637-b1d7-91b361ae7678';
+  let txUuid = '713d0003-389c-f637-b1d7-91b361ae7678';
+  let pwUuid = '713d0004-389c-f637-b1d7-91b361ae7678';
+  let statusUuid = '713d0005-389c-f637-b1d7-91b361ae7678';
 
   console.log('Requesting Bluetooth Device...');
   const device = await navigator.bluetooth.requestDevice({
-       acceptAllDevices: true,
-     optionalServices: [serviceUuid],
-//     filters: [{services: [serviceUuid]}]
+//         acceptAllDevices: true,
+//       optionalServices: [serviceUuid],
+     filters: [{services: [serviceUuid]}]
   });
 
   console.log('Connecting to GATT Server...');
@@ -105,31 +140,29 @@ async function Run() {
   console.log('Getting Characteristics...');
   rx = await service.getCharacteristic(rxUuid);
   tx = await service.getCharacteristic(txUuid);
-  console.log(rx);
-  console.log('> Rx UUID:  ' + rx.uuid);
-  console.log('> Broadcast:            ' + rx.properties.broadcast);
-  console.log('> Read:                 ' + rx.properties.read);
-  console.log('> Write w/o response:   ' + rx.properties.writeWithoutResponse);
-  console.log('> Write:                ' + rx.properties.write);
-  console.log('> Notify:               ' + rx.properties.notify);
-  console.log('> Indicate:             ' + rx.properties.indicate);
-  console.log('> Signed Write:         ' + rx.properties.authenticatedSignedWrites);
-  console.log('> Queued Write:         ' + rx.properties.reliableWrite);
-  console.log('> Writable Auxiliaries: ' + rx.properties.writableAuxiliaries);
+  pw = await service.getCharacteristic(pwUuid);
+  status = await service.getCharacteristic(statusUuid);
 
-  console.log('> Tx UUID:  ' + tx.uuid);
-  console.log('> Broadcast:            ' + tx.properties.broadcast);
-  console.log('> Read:                 ' + tx.properties.read);
-  console.log('> Write w/o response:   ' + tx.properties.writeWithoutResponse);
-  console.log('> Write:                ' + tx.properties.write);
-  console.log('> Notify:               ' + tx.properties.notify);
-  console.log('> Indicate:             ' + tx.properties.indicate);
-  console.log('> Signed Write:         ' + tx.properties.authenticatedSignedWrites);
-  console.log('> Queued Write:         ' + tx.properties.reliableWrite);
-  console.log('> Writable Auxiliaries: ' + tx.properties.writableAuxiliaries);
+  dumpChar(rx);
+  dumpChar(tx);
+  dumpChar(pw);
+  dumpChar(status);
 
+  console.log("StartNotify");
   await rx.startNotifications();
   rx.addEventListener('characteristicvaluechanged', OnRX);
+
+  await status.startNotifications();
+  status.addEventListener('characteristicvaluechanged', OnStatus);
+
+  console.log("Sending PW");
+  var status = await SendPW(document.getElementById('password').value);
+  if (status == "OK") {
+    console.log("Authenticated.");
+  } else {
+    console.log("WRONG PASSWORD!");
+    // TODO: something
+  }
 
   var preset;
   var presets = [];
@@ -168,9 +201,9 @@ async function Run() {
 
 </script>
 
-<button type=button onclick='Run()'>Connect</button>
+Password: <input type=password id=password onkeydown="if (event.keyCode == 13) Run();"><button type=button onclick='Run()'>Connect</button>
 <br>
-<input type=text id=textField onkeydown = "if (event.keyCode == 13) SendField();"><br>
+Send Command: <input type=text id=textField onkeydown="if (event.keyCode == 13) SendField();"><br>
 Voltage: <span id=voltage>---</span><br>
 <span id=presets>
 </span>
