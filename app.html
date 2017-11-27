@@ -5,22 +5,25 @@
     src: url(Starjedi.ttf);
 }
 
-.preset {
-  border-radius: 15px 50px;
+.header {
+  border-radius: 50px 50px 15px 15px; 
   border: 2px solid #6060aa;
   background: #101040;
   color: #FFFFFF;
   width: 250px;
-  height: 80px;
+  height: 30px;
   text-align: center;
-  margin: 3px;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 8px;
   position: relative;
   text-overflow:clip;
   overflow: hidden;
 }
 
-.track {
+.preset, .track, .control {
   border-radius: 15px 50px;
   border: 2px solid #6060aa;
   background: #101040;
@@ -28,18 +31,31 @@
   width: 250px;
   height: 80px;
   text-align: center;
-  margin: 3px;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 8px;
   position: relative;
   text-overflow:clip;
   overflow: hidden;
+  display: inline-block;
+}
+
+.centered {
+  margin: auto;
+  display:                 flex;
+  display:                 -webkit-flex; /* Safari 8 */
+  flex-wrap:               wrap;
+  -webkit-flex-wrap:       wrap;         /* Safari 8 */
+  justify-content:         center;
+  -webkit-justify-content: center;       /* Safari 8 */
 }
 
 .title {
   font-family: StarJedi;
   font-size: 250%;
   line-height: 0.8;
-
 
   margin: 0;
   position: absolute;
@@ -48,16 +64,65 @@
   transform: translate(-50%, -50%);
 
 }
+.appname {
+  font-family: StarJedi;
+  font-size: 250%;
+  line-height: 0.8;
+  text-align: center;
+}
+
+.pwbox {
+  font-family: StarJedi;
+  font-size: 400%;
+
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pwinput {
+  font-size: 100%;
+}
 
 body {
+  height: 100%;
+  overflow: hidden;
   background: black;
   color: lightblue;
-};
+  margin: 0;
+}
+
+body,
+html,
+.container {
+  height: 100%;
+}
+
+.container,
+.content {
+   display: flex;
+}
+.container {
+   flex-direction: column;
+}
+
+.content,
+.scrollable {
+  flex: 1;
+}
+
+.scrollable {
+  overflow: auto;
+  align: center;
+}
 
 </style>
 <link rel="manifest" href="/manifest.json">
 <meta name="msapplication-TileImage" content="icon.png">
 <meta name="msapplication-TileColor" content="#2F3BA2">
+<meta name=viewport content='width=850'>
 </head>
 <body onload='Init();'>
 
@@ -70,6 +135,10 @@ if ('serviceWorker' in navigator) {
 
 <script>
 
+let serviceUuid = '713d0000-389c-f637-b1d7-91b361ae7678';
+
+var device;
+var server;
 var rx;
 var tx;
 var pw;
@@ -79,11 +148,12 @@ var send_buf = [];
 var current_packet;
 var sending = false;
 var callback_queue = [];
+var last_callback;
 var status_cb;
 
 var buffer = "";
 var track_lines;
-
+var tracks_listed = false;
 
 function SendNext() {
   if (!current_packet) {
@@ -100,9 +170,18 @@ function SendNext() {
     function(v) { current_packet = 0; SendNext(); },
     function(e) {
       console.log('rejected', e);
-      // Do gatt.connect and re-send password?
-      window.setTimeout(SendNext, 1000);
+      Die();
+      setTimeout(DoRunLoop, 10000);
     });
+}
+
+function Die(e) {
+  for (var i = 0; i < callback_queue.length; i++)
+    callback_queue[i][1](e);
+  callback_queue=[];
+  current_packet = null;
+  send_buf = [];
+  sending = false;
 }
 
 
@@ -118,7 +197,8 @@ function OnRX(event) {
     ret = ret.split("\r").join("");
     console.log('> ' + ret);
     if (callback_queue.length) {
-      callback_queue[0](ret);
+      last_callback = Date.now();
+      callback_queue[0][0](ret);
       callback_queue = callback_queue.slice(1);
     }
   }
@@ -129,6 +209,24 @@ function concatTypedArrays(a, b) { // a, b TypedArray of same type
   c.set(a, 0);
   c.set(b, a.length);
   return c;
+}
+
+var watchdog_running = false;
+
+function WatchDog() {
+  watchdog_running = false;
+  if ((Date.now() - last_callback) > 20000) {
+    Die("timeout");
+    setTimeout(DoRunLoop, 10000);
+  }
+  RunWatchDog();
+}
+
+function RunWatchDog() {
+  if (callback_queue.length && !watchdog_running) {
+    watchdog_running = true;
+    setTimeout(WatchDog, 10000);
+  }
 }
 
 function Send(cmd) {
@@ -143,13 +241,16 @@ function Send(cmd) {
       send_buf.push(data.slice(0, 20));
       data = data.slice(20);
     }
-    callback_queue.push(resolve);
+    if (callback_queue.length == 0)
+      last_callback = Date.now();
+    callback_queue.push([resolve, reject]);
+    RunWatchDog();
 
-    console.log("======SEND BUF BEGIN===");
-    for (var i = 0; i < send_buf.length; i++) {
-      console.log(new TextDecoder().decode(send_buf[i]));
-    }
-    console.log("======SEND BUF END===");
+    //console.log("======SEND BUF BEGIN===");
+    //for (var i = 0; i < send_buf.length; i++) {
+    //  console.log(new TextDecoder().decode(send_buf[i]));
+    // }
+    //console.log("======SEND BUF END===");
     if (!sending) SendNext();
   });
 }
@@ -168,6 +269,7 @@ function SendPW(password) {
   // needs to fail on timeout
   return new Promise(function(resolve, reject) {
     status_cb = resolve;
+    setTimeout(reject, 2000)
     pw.writeValue(new TextEncoder('utf-8').encode(password));
   });
 }
@@ -181,6 +283,18 @@ function showCurrentPreset(preset) {
       preset_tags[i].style.background = '#101040';
     }
   }
+}
+
+async function On() {
+  await Send('on');
+  document.getElementById('onbutton').style.background = '#505080';
+  document.getElementById('offbutton').style.background = '#101040';
+}
+
+async function Off() {
+  await Send('off');
+  document.getElementById('offbutton').style.background = '#505080';
+  document.getElementById('onbutton').style.background = '#101040';
 }
 
 function showCurrentTrack(track) {
@@ -237,6 +351,25 @@ async function UpdateVolume() {
   updating_volume = false;
 }
 
+async function onDisconnected() {
+  console.log('Bluetooth Device disconnected');
+  Die();
+  
+  document.getElementById('reconnecting_message').style.visibility='visible';
+
+  while (true) {
+    await sleep(5000);
+    console.log('Try reconnect');
+    try {
+      await Connect();
+      document.getElementById('reconnecting_message').style.visibility='hidden';
+      DoRunLoop();
+      return;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+}
 
 function dumpChar(c) {
   console.log('> UUID:                 ' + c.uuid);
@@ -251,47 +384,49 @@ function dumpChar(c) {
   console.log('> Writable Auxiliaries: ' + c.properties.writableAuxiliaries);
 }
 
-async function Run() {
-  let serviceUuid = '713d0000-389c-f637-b1d7-91b361ae7678';
-  let rxUuid = '713d0002-389c-f637-b1d7-91b361ae7678';
-  let txUuid = '713d0003-389c-f637-b1d7-91b361ae7678';
-  let pwUuid = '713d0004-389c-f637-b1d7-91b361ae7678';
-  let statusUuid = '713d0005-389c-f637-b1d7-91b361ae7678';
+async function Connect() {
+  try {
+    let rxUuid = '713d0002-389c-f637-b1d7-91b361ae7678';
+    let txUuid = '713d0003-389c-f637-b1d7-91b361ae7678';
+    let pwUuid = '713d0004-389c-f637-b1d7-91b361ae7678';
+    let statusUuid = '713d0005-389c-f637-b1d7-91b361ae7678';
 
-  console.log('Requesting Bluetooth Device...');
-  const device = await navigator.bluetooth.requestDevice({
-//     acceptAllDevices: true,
-//      optionalServices: [serviceUuid],
-     filters: [{services: [serviceUuid]}]
-  });
+    console.log('Connecting to GATT Server...');
+    server = await device.gatt.connect();
+    console.log(server)
 
-  console.log('Connecting to GATT Server...');
-  const server = await device.gatt.connect();
-  console.log(server)
+    console.log('Getting Service...');
+    const service = await server.getPrimaryService(serviceUuid);
+    console.log(service)
 
-  console.log('Getting Service...');
-  const service = await server.getPrimaryService(serviceUuid);
-  console.log(service)
+    console.log('Getting Characteristics...');
+    rx = await service.getCharacteristic(rxUuid);
+    tx = await service.getCharacteristic(txUuid);
+    pw = await service.getCharacteristic(pwUuid);
+    status = await service.getCharacteristic(statusUuid);
 
-  console.log('Getting Characteristics...');
-  rx = await service.getCharacteristic(rxUuid);
-  tx = await service.getCharacteristic(txUuid);
-  pw = await service.getCharacteristic(pwUuid);
-  status = await service.getCharacteristic(statusUuid);
+    if (1) {
+      dumpChar(rx);
+      dumpChar(tx);
+      dumpChar(pw);
+      dumpChar(status);
+    }
 
-  if (1) {
-    dumpChar(rx);
-    dumpChar(tx);
-    dumpChar(pw);
-    dumpChar(status);
+    console.log("StartNotify");
+    await rx.startNotifications();
+    rx.addEventListener('characteristicvaluechanged', OnRX);
+
+    await status.startNotifications();
+    status.addEventListener('characteristicvaluechanged', OnStatus);
+
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+  }
+  catch (e) {
+    console.log(e);
+    document.getElementById('EMSG').innerHTML = 'Connection Failed';
+    throw e;
   }
 
-  console.log("StartNotify");
-  await rx.startNotifications();
-  rx.addEventListener('characteristicvaluechanged', OnRX);
-
-  await status.startNotifications();
-  status.addEventListener('characteristicvaluechanged', OnStatus);
 
   console.log("Sending PW");
   var password = document.getElementById('password').value;
@@ -299,10 +434,26 @@ async function Run() {
   if (status == "OK") {
     console.log("Authenticated.");
     localStorage.password = password;
+    document.getElementById('while_connected').style.visibility='visible';  
+    document.getElementById('while_disconnected').style.visibility='hidden';  
   } else {
     console.log("WRONG PASSWORD!");
-    // TODO: something
+    document.getElementById('EMSG').innerHTML = 'Wrong Password';
+    throw 'Wrong Password';
   }
+}
+
+async function Run() {
+  document.getElementById('EMSG').innerHTML = '';
+
+  console.log('Requesting Bluetooth Device...');
+  device = await navigator.bluetooth.requestDevice({
+//     acceptAllDevices: true,
+//      optionalServices: [serviceUuid],
+     filters: [{services: [serviceUuid]}]
+  });
+
+  await Connect();
 
   var preset;
   var presets = [];
@@ -310,7 +461,7 @@ async function Run() {
   const lines = preset_string.split("\n");
   for (var l = 0; l < lines.length; l++) {
     var tmp = lines[l].split("=");
-    console.log(tmp);
+//    console.log(tmp);
     if (tmp.length > 1) {
       if (tmp[0] == "FONT") {
         if (preset) presets.push(preset);
@@ -320,7 +471,7 @@ async function Run() {
     }
   }
 
-  console.log(presets);
+  // console.log(presets);
 
   preset_string = "";
   for (var i = 0; i < presets.length; i++) {
@@ -331,36 +482,70 @@ async function Run() {
   }
   document.getElementById('presets').innerHTML = preset_string;
 
-  var track_string = await Send("list_tracks");
-  track_lines = track_string.split("\n");
-  track_string = "";
-  for (var l = 0; l < track_lines.length; l++) {
-    var track = track_lines[l];
-    console.log(escape(track));
-    if (track.length > 4) {
-      var tmp = track.split('/');
-      var title = tmp[tmp.length - 1].split('.')[0].toLowerCase();
-      console.log(title);
-      // TODO: quote track properly
-      track_string += "<div class=track onclick='PlayTrack(\"" + escape(track) + "\")'>";
-      track_string += "<span class=title>" + title + "</span>";
-      track_string += "</div>";
+  DoRunLoop()
+}
+
+var loop_running = false;
+async function DoRunLoop() {
+  console.log('DoRunLoop');
+  if (!loop_running) {
+    loop_running = true;
+    try {
+      await Loop();
+    } finally {
+      console.log('Loop exit!');
+      loop_running = false;
     }
   }
-  document.getElementById('tracks').innerHTML = track_string;
+}
 
-while (true) {
+async function Loop() {
+  while (true) {
     const preset = await Send("get_preset");
     showCurrentPreset(preset);
 
-    const track = await Send("get_track");
-    showCurrentTrack(track.split("\n")[0]);
+    var current_track = await Send("get_track");
+    current_track = current_track.split("\n")[0];
+    showCurrentTrack(current_track);
 
     const volume = await Send("get_volume");
     document.getElementById('volume').value = parseInt(volume);
 
     const voltage = await Send("battery_voltage");
     document.getElementById('voltage').innerHTML = voltage;
+
+    const on = await Send("get_on");
+    if (parseInt(on)) {
+      document.getElementById('onbutton').style.background = '#505080';
+      document.getElementById('offbutton').style.background = '#101040';
+    } else {
+      document.getElementById('offbutton').style.background = '#505080';
+      document.getElementById('onbutton').style.background = '#101040';
+    }
+
+    // Listing tracks tends to interrupt whatever is currently playing so
+    // let's wait until the saber is off and not playing a track before
+    // we fetch the list of tracks.
+    if (tracks_listed == false && parseInt(on) == 0 && current_track == "") {
+      tracks_listed = true;
+      var track_string = await Send("list_tracks");
+      track_lines = track_string.split("\n");
+      track_string = "";
+      for (var l = 0; l < track_lines.length; l++) {
+        var track = track_lines[l];
+        // console.log(escape(track));
+        if (track.length > 4) {
+          var tmp = track.split('/');
+          var title = tmp[tmp.length - 1].split('.')[0].toLowerCase();
+          // console.log(title);
+          // TODO: quote track properly
+          track_string += "<div class=track onclick='PlayTrack(\"" + escape(track) + "\")'>";
+          track_string += "<span class=title>" + title + "</span>";
+          track_string += "</div>";
+        }
+      }
+      document.getElementById('tracks').innerHTML = track_string;
+    }
 
     // TODO: temp
     await sleep(5000);
@@ -374,21 +559,86 @@ function Init() {
 }
 
 </script>
-
-<center>
-  Enter Password: <input type=password id=password onkeydown="if (event.keyCode == 13) Run();"><button type=button onclick='Run()'>Connect</button>
-</center>
+<span class=pwbox id=while_disconnected>
+Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (event.keyCode == 13) Run();"><button class=pwinput type=button onclick='Run()'>Connect</button><br>
+<div id=EMSG  style='visibility:hidden;'></div>
+</span>
 <br>
+
 <!-- Send Command: <input type=text id=textField onkeydown="if (event.keyCode == 13) SendField();"><br> -->
-Volume: <input id=volume type=range min=0 max=2000 oninput='UpdateVolume();' onchange='UpdateVolume();'>
-Voltage: <span id=voltage>---</span><br>
 
-<div id=presets width=260 style='float:left;'></div>
-<div id=tracks width=260 style='float:left;'></div>
 
-<font size=-2>
-<div>Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="
-</font>
+<div id=while_connected class=container style='visibility:hidden;'>
+
+<div class="top" id=top_message>
+  <div class=appname>TeensySaber Control</div><br/>
+  Volume: <input id=volume type=range min=0 max=2000 oninput='UpdateVolume();' onchange='UpdateVolume();'>
+  Battery: <span id=voltage>---</span> volts.
+  <span id=reconnecting_message style='visibility:hidden;'>
+    Reconnecting...
+  </span>
+  <span>
+    <font size=-2>
+      <span style='display:block;float:right;'>Icons made by <a href="http://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a></span>
+    </font>
+  </span>
+</div>
+
+<div class=content>
+  <div class=scrollable>
+    <div class=header>
+       <span class=title>Presets</span>
+    </div>
+    <span id=presets  class=centered>
+       Waiting to list presets...
+    </span>  
+  </div>
+
+  <div class=scrollable>
+    <div class=header>
+       <span class=title>Tracks</span>
+    </div>
+    <span id=tracks class=centered>
+       Waiting to list tracks...
+    </span>  
+  </div>
+
+  <div class=scrollable>
+    <div class=header>
+       <span class=title>Controls</span>
+    </div>
+    <span id=controls  class=centered>
+    <div id=onbutton class=control>
+       <span class=title onclick='On();'>on</span>
+    </div>
+    <div id=offbutton class=control>
+       <span class=title onclick='Off();'>off</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("clash");'>clash</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("blast");'>blast</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("force");'>force</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("lockup");'>lockup</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("drag");'>drag</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("stop_track");'>stop track</span>
+    </div>
+    </span>  
+  </div>
+
+</div>
+
+
+</span>
 
 </body>
 
