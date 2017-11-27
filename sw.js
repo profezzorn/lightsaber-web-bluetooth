@@ -14,9 +14,9 @@
 
 var cacheName = 'TeensySaberAppCache';
 var filesToCache = [
-  '/test.html',
-  '/scripts/app.js',
-  '/StarJedi.ttf',
+  'app.html',
+  'scripts/app.js',
+  'StarJedi.ttf',
 ];
 
 self.addEventListener('install', function(e) {
