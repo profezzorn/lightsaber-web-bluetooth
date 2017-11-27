@@ -1,6 +1,6 @@
 {
     "name": "TeensySaber Remote",
-    "short_name": "SaberRemote",
+    "short_name": "TeensySaber Remote",
     "icons": [{
 	"src": "icon-256.png",
 	"sizes": "256x256",
