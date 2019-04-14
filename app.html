@@ -23,6 +23,26 @@
   overflow: hidden;
 }
 
+.editbutton {
+  font-size: 250%;
+  line-height: 0.8;
+  border-radius: 15px; 
+  border: 2px solid #6060aa;
+  background: #101040;
+  color: #FFFFFF;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  margin-top: 1px;
+  margin-bottom: 1px;
+  margin-left: 20xpx;
+  margin-right: 20px;
+  padding: 8px;
+  text-overflow:clip;
+  overflow: hidden;
+  float: right;
+}
+
 .preset, .track, .control {
   border-radius: 15px 50px;
   border: 2px solid #6060aa;
@@ -30,6 +50,44 @@
   color: #FFFFFF;
   width: 250px;
   height: 80px;
+  text-align: center;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 8px;
+  position: relative;
+  text-overflow:clip;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.edit, .edit-select {
+  border-radius: 15px 50px;
+  border: 2px solid #6060aa;
+  background: #101040;
+  color: #FFFFFF;
+  width: 580px;
+  height: 160px;
+  text-align: center;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 8px;
+  position: relative;
+  text-overflow:clip;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.edit_tall {
+  border-radius: 15px 50px;
+  border: 2px solid #6060aa;
+  background: #101040;
+  color: #FFFFFF;
+  width: 580px;
+  height: 400px;
   text-align: center;
   margin-top: 3px;
   margin-bottom: 3px;
@@ -62,8 +120,42 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-
 }
+
+.myselect {
+  font-family: StarJedi;
+  font-size: 80%;
+  background: #101040;
+  color: #FFFFFF;
+  border: 0px;
+  text-align: center;
+}
+
+.myinput {
+  font-family: Arial;
+  font-size: 80%;
+  background: #101040;
+  color: #FFFFFF;
+  border: 0px;
+  text-align: center;
+}
+
+.value {
+  line-height: 1.2;
+  font-family: sans-serif;
+}
+
+.title2 {
+  font-size: 250%;
+  line-height: 0.8;
+
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .appname {
   font-family: StarJedi;
   font-size: 250%;
@@ -113,9 +205,21 @@ html,
   flex: 1;
 }
 
+.edit_scrollable {
+  flex: 2;
+}
+
 .scrollable {
   overflow: auto;
   align: center;
+}
+
+input[type="color"].custom {
+  padding: 0;
+  border: none;
+  height: 50px;
+  width: 300px;
+  vertical-align: middle;
 }
 
 </style>
@@ -144,6 +248,11 @@ var tx;
 var pw;
 var status;
 
+// USB vars
+var usb_device;
+var endpointOut;
+var endpointIn;
+
 var send_buf = [];
 var current_packet;
 var sending = false;
@@ -153,6 +262,9 @@ var status_cb;
 
 var buffer = "";
 var track_lines;
+var font_lines;
+var style_lines;
+var named_styles = {};
 var tracks_listed = false;
 
 function SendNext() {
@@ -184,9 +296,9 @@ function Die(e) {
   sending = false;
 }
 
-
-function OnRX(event) {
-  var data = new TextDecoder().decode(event.target.value);
+function OnData(data) {
+  data = new TextDecoder().decode(data);
+  // console.log("GOT DATA: " + data);
   buffer += data;
   var tmp = buffer.split("-+=END_OUTPUT=+-");
   if (tmp.length > 1) {
@@ -202,6 +314,10 @@ function OnRX(event) {
       callback_queue = callback_queue.slice(1);
     }
   }
+}
+
+function OnRX(event) {
+  OnData(event.target.value);
 }
 
 function concatTypedArrays(a, b) { // a, b TypedArray of same type
@@ -230,9 +346,20 @@ function RunWatchDog() {
 }
 
 function Send(cmd) {
+  var data = new TextEncoder('utf-8').encode(cmd + '\n');
+  // console.log(usb_device);
+  if (usb_device) {
+    return new Promise(function(resolve, reject) {
+      console.log("Sending " + cmd);
+      if (callback_queue.length == 0)
+        last_callback = Date.now();
+      callback_queue.push([resolve, reject])
+      RunWatchDog();
+      usb_device.transferOut(endpointOut, data);
+    });
+  }
   // needs to fail on timeout
   return new Promise(function(resolve, reject) {
-    var data = new TextEncoder('utf-8').encode(cmd + '\n');
     if (send_buf.length && send_buf[send_buf.length-1].length != 20) {
       data = concatTypedArrays(send_buf[send_buf.length-1], data);
       send_buf = send_buf.slice(0, send_buf.length-1);
@@ -274,15 +401,215 @@ function SendPW(password) {
   });
 }
 
+function make_select(list, value) {
+  if (!list) list = [];
+  var contains_value = false;
+  for (var i = 0; i < list.length; i++) {
+    if (value == list[i]) { contains_value = true; break; }
+  }
+  if (!contains_value) {
+    list = list.slice();
+    list.push(value);
+  }
+  var ret = "";
+  for (var i = 0; i < list.length; i++) {
+    ret += "<option value='"+list[i]+"' ";
+    if (value == list[i]) ret += " selected";
+    ret +=">"+list[i].toLowerCase()+"</option>";
+  }
+  return ret;
+}
+
+var arg_storage = {};
+
+function from16bitlinear(val) {
+  val = parseInt(val);
+  val = Math.round(Math.pow(val / 65535.0, 2.2) * 255.0);
+  return Number(1024 + val).toString(16).slice(-2);
+}
+
+
+function from16bitcolor(val) {
+  val = val.split(",");
+  return "#" + from16bitlinear(val[0]) + from16bitlinear(val[1]) + from16bitlinear(val[2]);
+}
+
+function to16bitlinear(val) {
+  val = parseInt(val, 16);
+  val = Math.round(Math.pow(val / 255.0, 1.0 / 2.2) * 65536);
+  return val;
+}
+
+function to16bitcolor(val) {
+  return to16bitlinear(val.substr(1,2)) + "," +
+         to16bitlinear(val.substr(3,2)) + "," +
+         to16bitlinear(val.substr(5,2));
+}
+
+function style_arg_edits(blade, style) {
+  var ret = ""
+  if (named_styles[style]) {
+    var args = named_styles[style].ARGS;
+    for (var i = 0; i < args.length; i++) {
+      // console.log(args[i]);
+      ret += "<br>"+args[i][1]+"<br>";
+      var value = arg_storage[style + "." + i];
+      console.log(value);
+      if (!value) {
+        value = args[i][2];
+      }
+      console.log(value);
+      if (args[i][0] == "INT") {
+        ret += "<input type=text id=style_field"+blade+"."+i+" class=myinput onchange='SaveStyle("+blade+")' value="+value+">";
+      }
+      if (args[i][0] == "COLOR") {
+        ret += "<input type=color id=style_field"+blade+"."+i+" class=custom onchange='SaveStyle("+blade+")' value="+from16bitcolor(value)+">";
+      }
+    }
+  }
+  return ret;
+}
+
+function style_field_height(style) {
+  if (named_styles[style])
+    return (named_styles[style].ARGS.length * 2 + 3) * 46;
+  return 300;
+}
+
+function make_style_field(blade, value) {
+  arg_storage = {};
+  var fields = value.split(' ');
+  var style = fields[0];
+  var height = style_field_height(style);
+  var ret = "<div class=edit_tall style='height:"+height+"px' id='style_edit"+blade+"'>";
+  ret += "<span class=title>style"+blade+"<br>";
+  ret += "<select class=myselect id=style_select"+blade+" onchange='OnStyleSelect("+blade+")'>";
+  ret += make_select(style_lines, style);
+  ret += "</select>";
+
+  for (var i = 1; i < fields.length; i++) {
+    arg_storage[style + "." + (i-1)] = fields[i];
+  }
+  ret += "<span id=style_container"+blade+">";
+  ret += style_arg_edits(blade, style);
+  ret += "</span></span></div>\n";
+  return ret;
+}
+
+function OnStyleSelect(blade) {
+  var style_select = document.getElementById('style_select'+blade);
+  var style = style_select.value;
+  var style_container = document.getElementById('style_container'+blade);
+  style_container.innerHTML = style_arg_edits(blade, style);
+
+  var style_edit = document.getElementById('style_edit'+blade);
+  var height = style_field_height(style);
+  style_edit.style.height = height + "px";
+
+  SaveStyle(blade);
+}
+
+function SaveStyle(blade) {
+  var style_select = document.getElementById('style_select'+blade);
+  var style = style_select.value;
+  var ret = [style];
+  var args = named_styles[style].ARGS;
+  for (var i = 0; i < args.length; i++) {
+     var form_field = document.getElementById('style_field'+blade+'.'+i);
+     var val = form_field.value;
+     if (val[0] == '#') {
+       val = to16bitcolor(val);
+     }
+     arg_storage[style + "." + i] = val;
+     ret.push(val);
+  }
+  console.log("***SAVE STYLE***");
+  console.log(ret);
+  ret = ret.join(" ");
+  presets[current_preset_num]["STYLE"+blade] = ret;
+  Send("set_style"+blade+ " " + ret);
+}
+
+function SaveName() {
+  var name_input = document.getElementById('name_input');
+  console.log("SAVE NAME " + name_input.value);
+  if (presets[current_preset_num].NAME != name_input.value) {
+    presets[current_preset_num].NAME = name_input.value;
+    Send("set_name " + name_input.value);
+  }
+  const preset_tags = document.getElementsByClassName('preset');
+  UpdatePresets();  
+}
+
+function make_name_field(value) {
+  return "<div class=edit><span class=title>name<br><input type=text class=myinput id=name_input value='"+value+"' onchange='SaveName()'></span></div>\n";
+}
+
+function SaveFont() {
+  var font_select = document.getElementById('font_select');
+  console.log("SAVE FONT " + font_select.value);
+  if (presets[current_preset_num].FONT != font_select.value) {
+    presets[current_preset_num].FONT = font_select.value;
+    Send("set_font " + font_select.value);
+  }
+}
+
+function make_font_field(value) {
+  ret="<div class=edit-select><span class=title>font<br><select class=myselect id=font_select name=font_select onchange='SaveFont()'>";
+  ret+= make_select(font_lines, value);
+  ret += "</select></span></div>\n";
+  return ret;
+}
+
+function SaveTrack() {
+  var track_select = document.getElementById('track_select');
+  console.log("SAVE TRACK " + track_select.value);
+  if (presets[current_preset_num].TRACK != track_select.value) {
+    presets[current_preset_num].TRACK = track_select.value;
+    Send("set_track " + track_select.value);
+  }
+}
+
+function make_track_field(value) {
+  ret="<div class=edit-select><span class=title>track<br><select class=myselect id=track_select onchange='SaveTrack()'>";
+  ret += make_select(track_lines, value);
+  ret += "</select></span></div>\n";
+  return ret;
+}
+
+function updateEditPane(preset) {
+  // TODO: We shouldn't do this part every 5 seconds!
+  var tmp = "";
+  tmp += make_name_field(presets[preset].NAME);
+  tmp += make_font_field(presets[preset].FONT);
+  tmp += make_track_field(presets[preset].TRACK);
+  for (var blade = 1; presets[preset]["STYLE" + blade]; blade++) {
+    tmp += make_style_field(blade , presets[preset]["STYLE" + blade]);
+  }
+  var edit_pane = document.getElementById('edit_pane2');
+  console.log(edit_pane);  
+  edit_pane.innerHTML = tmp;
+}
+
+var current_preset_num = -1;
 function showCurrentPreset(preset) {
+  preset = parseInt(preset);
+  if (current_preset_num == preset) return;
+  current_preset_num = preset;
+  updateCurrentPreset();
+}
+
+function updateCurrentPreset() {
   const preset_tags = document.getElementsByClassName('preset');
   for (var i = 0; i < preset_tags.length; i++) {
-    if (i == preset) {
+    if (i == current_preset_num) {
       preset_tags[i].style.background = '#505080';
     } else {
       preset_tags[i].style.background = '#101040';
     }
   }
+  if (editMode)
+    updateEditPane(current_preset_num);
 }
 
 async function On() {
@@ -298,20 +625,60 @@ async function Off() {
 }
 
 function showCurrentTrack(track) {
-  const preset_tags = document.getElementsByClassName('track');
-  for (var i = 0; i < preset_tags.length; i++) {
-    if (track_lines[i] == track) {
-      preset_tags[i].style.background = '#505080';
-    } else {
-      preset_tags[i].style.background = '#101040';
-    }
-  }
+// FIXME
+//  const preset_tags = document.getElementsByClassName('track');
+//  for (var i = 0; i < track_lines.length; i++) {
+//    if (track_lines[i] == track) {
+//      track_tags[i].style.background = '#505080';
+//    } else {
+//      track_tags[i].style.background = '#101040';
+//    }
+//  }
 }
 
 async function SetPreset(n) {
 //  showCurrentPreset(n);
   await Send("set_preset " + n);
   showCurrentPreset(n);
+}
+
+async function StartDrag(n) {
+  console.log('DRAG ' + n);
+  //  showCurrentPreset(n);
+  dragging = n;
+  Send("set_preset " + n);
+  showCurrentPreset(n);
+}
+
+async function DropEvent(n) {
+  console.log('DROP ' + n);
+//  showCurrentPreset(n);
+  if (n == dragging) {
+    return;
+  }
+  Send("move_preset " + n);
+  var x = presets[dragging];
+  presets = presets.slice(0, dragging).concat(presets.splice(dragging + 1, presets.length));
+  presets = presets.slice(0, n).concat([x], presets.slice(n, presets.length));
+  UpdatePresets();
+}
+
+async function AddPreset() {
+  Send("duplicate_preset " + presets.length);
+  presets.push(Object.assign({}, presets[current_preset_num]));
+  UpdatePresets();
+}
+
+async function DelPreset() {
+  if (current_preset_num >= 0 &&
+      current_preset_num < presets.length &&
+      presets.length > 1) {
+    Send("delete_preset " + current_preset_num);
+    presets.splice(current_preset_num, 1);
+    current_preset_num = -1;
+    SetPreset(0);
+  }
+  UpdatePresets();
 }
 
 async function PlayTrack(track) {
@@ -427,15 +794,12 @@ async function Connect() {
     throw e;
   }
 
-
   console.log("Sending PW");
   var password = document.getElementById('password').value;
   var status = await SendPW(password);
   if (status == "OK") {
     console.log("Authenticated.");
     localStorage.password = password;
-    document.getElementById('while_connected').style.visibility='visible';  
-    document.getElementById('while_disconnected').style.visibility='hidden';  
   } else {
     console.log("WRONG PASSWORD!");
     document.getElementById('EMSG').innerHTML = 'Wrong Password';
@@ -443,10 +807,48 @@ async function Connect() {
   }
 }
 
+var presets = [];
+var editMode = false;
+var dragging = null;
+
+function ToggleEditMode() {
+  editMode = !editMode;
+  document.getElementById("editbutton").style.background = editMode ? '#505080' : '#101040';
+  document.getElementById('CTRL').style.display=editMode ? 'none' : 'initial'
+  document.getElementById('TRACKS').style.display=editMode ? 'none' : 'initial'
+  document.getElementById('edit_pane').style.display=editMode ? 'initial' : 'none';
+
+  UpdatePresets();
+}
+
+function UpdatePresets() {
+  preset_string = "";
+  for (var i = 0; i < presets.length; i++) {
+    var p = presets[i];
+    if (editMode) {
+      preset_string += "<div draggable=true class=preset ondragstart='StartDrag("+i+")' onclick='SetPreset(" + i + ")'  ondrop='DropEvent("+i+")'  ondoubleclick='EditPreset("+i+")' ondragover='return false'>";
+    } else {
+      preset_string += "<div class=preset onclick='SetPreset(" + i + ")'>";
+    }
+    preset_string += "<span class=title>" + p.NAME.replace("\\n", "<br>") + "</span>";
+    preset_string += "</div>";
+  }
+  if (editMode) {
+    preset_string += "<div class=preset onclick='AddPreset()'>";
+    preset_string += "<span class=title2>+</span>";
+    preset_string += "</div>";
+    preset_string += "<div class=preset ondrop='DelPreset()'>";
+    preset_string += "<span class=title2>&#x1F5D1;</span>";
+    preset_string += "</div>";
+  }
+  document.getElementById('presets').innerHTML = preset_string;
+  updateCurrentPreset(current_preset_num);
+}
+	
+
 async function Run() {
   document.getElementById('EMSG').innerHTML = '';
 
-  console.log('Requesting Bluetooth Device...');
   device = await navigator.bluetooth.requestDevice({
 //     acceptAllDevices: true,
 //      optionalServices: [serviceUuid],
@@ -454,9 +856,16 @@ async function Run() {
   });
 
   await Connect();
+  Run2();
+}
 
-  var preset;
-  var presets = [];
+async function Run2() {
+  document.getElementById('while_connected').style.visibility='visible';  
+  document.getElementById('while_disconnected').style.visibility='hidden';  
+  document.getElementById('connect_usb').style.visibility='hidden';
+  document.getElementById('connect_ble').style.visibility='hidden';
+
+var preset;
   var preset_string = await Send("list_presets");
   const lines = preset_string.split("\n");
   for (var l = 0; l < lines.length; l++) {
@@ -470,20 +879,67 @@ async function Run() {
       preset[tmp[0]] = tmp.slice(1).join("=");
     }
   }
+  if (preset && Object.keys(preset).length > 0)
+    presets.push(preset);
 
   // console.log(presets);
 
-  preset_string = "";
-  for (var i = 0; i < presets.length; i++) {
-    var p = presets[i];
-    preset_string += "<div class=preset onclick='SetPreset(" + i + ")'>";
-    preset_string += "<span class=title>" + p.NAME.replace("\\n", "<br>") + "</span>";
-    preset_string += "</div>";
-  }
-  document.getElementById('presets').innerHTML = preset_string;
-
+  UpdatePresets();
   DoRunLoop()
 }
+
+async function RunUSB() {
+  document.getElementById('EMSG').innerHTML = '';
+  var filters = [
+     { 'vendorId': 0x1209, 'productId': 0x6668 },
+  ];
+  usb_device = await navigator.usb.requestDevice({'filters': filters});
+  await usb_device.open();
+  if (usb_device.configuration === null) {
+    usb_device.selectConfiguration(1);
+  }
+
+  // console.log(device);
+  var interfaceNumber;
+	  
+  usb_device.configuration.interfaces.forEach(element => {
+    element.alternates.forEach(elementalt => {
+      console.log(elementalt);
+      if (elementalt.interfaceClass == 0xff) {
+        interfaceNumber = element.interfaceNumber;
+        elementalt.endpoints.forEach(elementendpoint => {
+          if (elementendpoint.direction == "out") {
+            endpointOut = elementendpoint.endpointNumber;
+          }
+          if (elementendpoint.direction == "in") {
+            endpointIn = elementendpoint.endpointNumber;
+          }
+        })
+      }
+    })
+  })
+
+  console.log(endpointOut);
+  console.log(endpointIn);
+
+  await usb_device.claimInterface(interfaceNumber);
+  await usb_device.selectAlternateInterface(interfaceNumber, 0);
+  await usb_device.controlTransferOut({
+    'requestType': 'class',
+    'recipient': 'interface',
+    'request': 0x22,
+    'value': 0x01,
+    'index': interfaceNumber});
+
+  usb_device.transferOut(endpointOut,
+    new TextEncoder('utf-8').encode("\n\n"));  
+  Run2();
+  while (true) {
+    var data = await usb_device.transferIn(endpointIn, 64);
+    OnData(data.data);
+  }
+}    
+
 
 var loop_running = false;
 async function DoRunLoop() {
@@ -497,6 +953,16 @@ async function DoRunLoop() {
       loop_running = false;
     }
   }
+}
+
+async function GetList(cmd) {
+  var s = await Send(cmd);
+  if (s.startsWith("Whut?")) {
+    return [];
+  }
+  var ret = s.split("\n");
+  ret.pop();  // remove empty line at end
+  return ret;
 }
 
 async function Loop() {
@@ -528,8 +994,7 @@ async function Loop() {
     // we fetch the list of tracks.
     if (tracks_listed == false && parseInt(on) == 0 && current_track == "") {
       tracks_listed = true;
-      var track_string = await Send("list_tracks");
-      track_lines = track_string.split("\n");
+      track_lines = await GetList("list_tracks");
       track_string = "";
       for (var l = 0; l < track_lines.length; l++) {
         var track = track_lines[l];
@@ -545,6 +1010,31 @@ async function Loop() {
         }
       }
       document.getElementById('tracks').innerHTML = track_string;
+      font_lines = await GetList("list_fonts");
+      style_lines = await GetList("list_named_styles");
+      named_styles = { };
+      for (var i = 0; i < style_lines.length; i++) {
+	 console.log(style_lines[i]);
+         var desc = await GetList("describe_named_style "+style_lines[i]);
+	 console.log(desc);
+	 console.log(desc[0]);
+	 var args = desc[0].split(",");
+	 var arguments = [];
+	 for (var j = 1; j < desc.length; j++) {
+           var default_arguments = desc[j].split(" ");
+	   // TYPE, DESC, DEFAULT
+	   arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
+	 }
+	 named_styles[style_lines[i]] = {
+	   NAME : style_lines[i],
+	   DESC : args[0],
+	   ARGS : arguments
+	 };
+      }
+
+      if (named_styles["builtin"]) {
+         document.getElementById("editbutton").style.visibility='visible';
+      }
     }
 
     // TODO: temp
@@ -556,12 +1046,23 @@ function Init() {
   if (localStorage.password) {
     document.getElementById('password').value = localStorage.password;
   }
+  if (navigator.usb) {
+    document.getElementById('connect_usb').style.visibility='visible';
+  }
+  if (navigator.bluetooth) {
+    document.getElementById('connect_ble').style.visibility='visible';
+  }
 }
 
 </script>
 <span class=pwbox id=while_disconnected>
-Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (event.keyCode == 13) Run();"><button class=pwinput type=button onclick='Run()'>Connect</button><br>
-<div id=EMSG  style='visibility:hidden;'></div>
+  <div id=connect_usb style='visibility:hidden;'>
+    <button class=pwinput type=button onclick='RunUSB()'>Connect (USB)</button><br>
+  </div>
+  <div id=connect_ble style='visibility:hidden;'>
+    Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (event.keyCode == 13) Run();"><button class=pwinput type=button onclick='Run()'>Connect (BLE)</button><br>
+  </div>
+  <div id=EMSG  style='visibility:hidden;'></div>
 </span>
 <br>
 
@@ -571,7 +1072,8 @@ Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (eve
 <div id=while_connected class=container style='visibility:hidden;'>
 
 <div class="top" id=top_message>
-  <div class=appname>TeensySaber Control</div><br/>
+  <div class=editbutton  style='visibility:hidden;' id=editbutton onclick='ToggleEditMode()'>&#x270E;</div>
+  <div class=appname>Proffieos Control</div><br/>
   Volume: <input id=volume type=range min=0 max=2000 oninput='UpdateVolume();' onchange='UpdateVolume();'>
   Battery: <span id=voltage>---</span> volts.
   <span id=reconnecting_message style='visibility:hidden;'>
@@ -594,7 +1096,14 @@ Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (eve
     </span>  
   </div>
 
-  <div class=scrollable>
+  <div id=edit_pane class=edit_scrollable  style='display:none;'>
+    <div class=header><span class=title>Edit</span><br></div>
+    <span id=edit_pane2  class=centered>
+      Getting options...
+    </span>
+  </div>
+
+  <div id=TRACKS class=scrollable>
     <div class=header>
        <span class=title>Tracks</span>
     </div>
@@ -603,7 +1112,7 @@ Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (eve
     </span>  
   </div>
 
-  <div class=scrollable>
+  <div id=CTRL class=scrollable>
     <div class=header>
        <span class=title>Controls</span>
     </div>
