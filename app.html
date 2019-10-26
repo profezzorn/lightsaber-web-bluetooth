@@ -922,11 +922,15 @@ async function Run2() {
   document.getElementById('connect_ble').style.visibility='hidden';
 
   var preset;
-  var preset_string = await Send("list_presets");
+  var preset_string;
+  while (true) {
+    preset_string = await Send("list_presets");
+    if (preset_string.split("=").length > 3) break;
+  }
   const lines = preset_string.split("\n");
   for (var l = 0; l < lines.length; l++) {
     var tmp = lines[l].split("=");
-//    console.log(tmp);
+    console.log(tmp);
     if (tmp.length > 1) {
       if (tmp[0] == "FONT") {
         if (preset) presets.push(preset);
