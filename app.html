@@ -942,7 +942,6 @@ async function Run2() {
   }
   if (preset && Object.keys(preset).length > 0)
     presets.push(preset);
-
   // console.log(presets);
 
   UpdatePresets();
@@ -962,7 +961,9 @@ async function RunUSB() {
 
   // console.log(device);
   var interfaceNumber;
-	  
+
+  endpointOut = -1;
+  endpointIn = -1;
   usb_device.configuration.interfaces.forEach(element => {
     element.alternates.forEach(elementalt => {
       console.log(elementalt);
@@ -980,8 +981,12 @@ async function RunUSB() {
     })
   })
 
-  console.log(endpointOut);
-  console.log(endpointIn);
+  console.log("OUT EP", endpointOut, "IN EP", endpointIn);
+  if (endpointOut == -1 || endpointIn == -1) {
+    usb_device = undefined;
+    document.getElementById('EMSG').innerHTML = "No Webusb interface found"
+    return;
+  }
 
   await usb_device.claimInterface(interfaceNumber);
   await usb_device.selectAlternateInterface(interfaceNumber, 0);
