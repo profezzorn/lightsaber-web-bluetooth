@@ -447,7 +447,7 @@ function from16bitcolor(val) {
 
 function to16bitlinear(val) {
   val = parseInt(val, 16);
-  val = Math.round(Math.pow(val / 255.0, 1.0 / 2.2) * 65536);
+  val = Math.round(Math.pow(val / 255.0, 1.0 / 2.2) * 65535);
   return val;
 }
 
