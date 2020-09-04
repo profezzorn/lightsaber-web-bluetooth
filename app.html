@@ -129,6 +129,7 @@
   color: #FFFFFF;
   border: 0px;
   text-align: center;
+  text-align-last:center;
 }
 
 .myinput {
@@ -142,7 +143,7 @@
 
 .mybutton {
   font-family: StarJedi;
-  font-size: 130%;
+  font-size: 110%;
   line-height: 0.8;
   background: #101040;
   color: #FFFFFF;
@@ -233,6 +234,33 @@ input[type="color"].custom {
   vertical-align: middle;
 }
 
+.slidecontainer {
+  width: 100%;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 15px;
+  border-radius: 5px;
+  background: #f0f0f0;
+  outline: none;
+  opacity: 1;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #1000ff;
+  cursor: pointer;
+}
+
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="msapplication-TileImage" content="icon.png">
@@ -274,10 +302,13 @@ var status_cb;
 var buffer = "";
 var track_lines;
 var font_lines;
+var dir_lines;
+var common_lines;
 var style_lines;
 var named_styles = {};
+var track_string = "";
 var tracks_listed = false;
-
+var has_dimblade = false;
 function SendNext() {
   if (!current_packet) {
     if (!send_buf.length) {
@@ -539,6 +570,7 @@ function SaveStyle(blade) {
   ret = ret.join(" ");
   presets[current_preset_num]["STYLE"+blade] = ret;
   Send("set_style"+blade+ " " + ret);
+  SetPreset(current_preset_num) //to make sure it takes immediate effect
 }
 
 function SaveName() {
@@ -556,18 +588,90 @@ function make_name_field(value) {
   return "<div class=edit><span class=title>name<br><input type=text class=myinput id=name_input value='"+value+"' onchange='SaveName()'></span></div>\n";
 }
 
+
+function SaveVariation() {
+  var variation_slider = document.getElementById('variation_slider');
+  console.log("SAVE VARIATION " + variation_slider.value);
+  if (presets[current_preset_num].VARIATION != variation_slider.value) {
+    presets[current_preset_num].VARIATION = variation_slider.value;
+    Send("variation " + variation_slider.value);
+  }
+  var variation_field = document.getElementById('variation_field');
+  if ( variation_field.value != variation_slider.value){
+     variation_field.value = variation_slider.value; //update numeric value when altered by slider
+  }
+  const preset_tags = document.getElementsByClassName('preset');
+  //	SetPreset(current_preset_num) //no need, variation is always updates directly
+  UpdatePresets();  
+}
+
+
+function SetVariation(){
+  var set_variation_field = document.getElementById('variation_field');
+  console.log("SET VARIATION " + set_variation_field.value);
+  var set_variation_slider = document.getElementById('variation_slider');
+  set_variation_slider.value = set_variation_field.value;
+  SaveVariation(); // now do the actual update
+}
+
+function make_variation_field(value) {
+  var ret = "<div class=edit>";
+  ret += "<span class=title>variation<br><br><input type=range min=0 max=32767 class=slider id=variation_slider value='"+value+"' onchange='SaveVariation()'>";
+  ret += "<br><input type=text id=variation_field class=myinput onchange='SetVariation()' value="+value+">"; 
+  ret += "</span></div>\n"; 
+  return ret;
+}
+
+function SaveBrightness() {
+  var font_select = document.getElementById('brightness_slider');
+  console.log("SAVE BRIGHTNESS " + brightness_slider.value);
+  brightness_ = brightness_slider.value;
+  Send("dim " + brightness_slider.value);
+}
+
+var brightness_ =100;
+
+function make_brightness_field(value) {
+  var ret = "<div class=edit>";
+  ret += "<span class=title>brightness<br><br><input type=range min=0 max=100 class=slider id=brightness_slider value='"+value+"' onchange='SaveBrightness()'>";
+  ret += "</span></div>\n"; 
+  return ret;
+}
+
 function SaveFont() {
   var font_select = document.getElementById('font_select');
-  console.log("SAVE FONT " + font_select.value);
-  if (presets[current_preset_num].FONT != font_select.value) {
-    presets[current_preset_num].FONT = font_select.value;
-    Send("set_font " + font_select.value);
+  var addon_select = document.getElementById('font_select2');
+  var font_path = font_select.value;
+  if (addon_select.value != "none"){
+    font_path += ";" + addon_select.value;
+  }
+  console.log("SAVE FONT " + font_path);
+  if (presets[current_preset_num].FONT != font_path) {
+    presets[current_preset_num].FONT = font_path;
+    Send("set_font " + font_path);
+    SetPreset(current_preset_num) //to make sure it takes immediate effect
   }
 }
 
 function make_font_field(value) {
-  ret="<div class=edit-select><span class=title>font<br><select class=myselect id=font_select name=font_select onchange='SaveFont()'>";
-  ret+= make_select(font_lines, value);
+  var tmp = value.split(";");
+  var font_ = value;
+  var addon_ = "none"
+  if (tmp.length > 1){
+    for (var i = 0; i < font_lines.length; i++) {
+      if (tmp[0] == font_lines[i]) { font_ = tmp[0];value = tmp[1];}
+      if (tmp[1] == font_lines[i]) { font_ = tmp[1];value = tmp[0];}
+    }
+    for (var i = 0; i < dir_lines.length; i++) {
+      if (value == dir_lines[i]) { addon_ = value;}
+    }
+  }
+  ret ="<div class=edit_tall><span class=title>soundfont<br><br><select class=myselect id=font_select name=font_select onchange='SaveFont()'>";
+  ret += make_select(font_lines, font_);
+  ret += "</select>";
+  ret += "<p class=myselect>additional folder</p>";
+  ret +="<select class=myselect id=font_select2 name=font_select2 onchange='SaveFont()'>";
+  ret += make_select(dir_lines, addon_);
   ret += "</select></span></div>\n";
   return ret;
 }
@@ -578,6 +682,7 @@ function SaveTrack() {
   if (presets[current_preset_num].TRACK != track_select.value) {
     presets[current_preset_num].TRACK = track_select.value;
     Send("set_track " + track_select.value);
+    SetPreset(current_preset_num); //to make sure it takes immediate effect
   }
 }
 
@@ -592,12 +697,14 @@ function updateEditPane(preset) {
   // TODO: We shouldn't do this part every 5 seconds!
   var tmp = "";
   tmp += make_name_field(presets[preset].NAME);
-  tmp += make_font_field(presets[preset].FONT);
   tmp += make_track_field(presets[preset].TRACK);
+  tmp += make_font_field(presets[preset].FONT);
   for (var blade = 1; presets[preset]["STYLE" + blade]; blade++) {
     tmp += make_style_field(blade , presets[preset]["STYLE" + blade]);
   }
   var edit_pane = document.getElementById('edit_pane2');
+  tmp += make_variation_field(presets[preset].VARIATION);
+  if (has_dimblade) {tmp += make_brightness_field(brightness_);}
   console.log(edit_pane);  
   edit_pane.innerHTML = tmp;
 }
@@ -636,15 +743,17 @@ async function Off() {
 }
 
 function showCurrentTrack(track) {
-// FIXME
-//  const preset_tags = document.getElementsByClassName('track');
-//  for (var i = 0; i < track_lines.length; i++) {
-//    if (track_lines[i] == track) {
-//      track_tags[i].style.background = '#505080';
-//    } else {
-//      track_tags[i].style.background = '#101040';
-//    }
-//  }
+// FIXME -> fixed!!
+  if (track_string != ""){
+    const track_tags = document.getElementsByClassName('track');
+    for (var i = 0; i < track_lines.length; i++) {
+      if (track_lines[i] == track) {
+      track_tags[i].style.background = '#505080';
+      } else {
+        track_tags[i].style.background = '#101040';
+      }
+    }
+  }
 }
 
 async function SetPreset(n) {
@@ -675,9 +784,12 @@ async function DropEvent(n) {
 }
 
 async function AddPreset() {
+  var r = confirm("Duplicate current preset?");
+  if (r == true) {
   Send("duplicate_preset " + presets.length);
   presets.push(Object.assign({}, presets[current_preset_num]));
   UpdatePresets();
+  }
 }
 
 async function DelPreset() {
@@ -690,6 +802,13 @@ async function DelPreset() {
     SetPreset(0);
   }
   UpdatePresets();
+}
+
+async function DelConfirm() {
+  var r = confirm("Delete current preset?");
+  if (r == true) {
+    DelPreset();
+  } 
 }
 
 async function PlayTrack(track) {
@@ -873,7 +992,7 @@ function UpdatePresets() {
     preset_string += "<div class=preset onclick='AddPreset()'>";
     preset_string += "<span class=title2>+</span>";
     preset_string += "</div>";
-    preset_string += "<div class=preset ondrop='DelPreset()'>";
+    preset_string += "<div class=preset ondrop='DelPreset()' onclick=DelConfirm()>";
     preset_string += "<span class=title2>&#x1F5D1;</span>";
     preset_string += "</div>";
   }
@@ -894,7 +1013,7 @@ var UARTs = {
   "569a1101-b87f-490c-92cb-11ba5ea5167c" : { rx:"569a2001-b87f-490c-92cb-11ba5ea5167c", tx:"569a2000-b87f-490c-92cb-11ba5ea5167c"},  //Laird BL600 Virtual Serial Port Service
 };
 
-
+//BLE
 async function Run() {
   document.getElementById('EMSG').innerHTML = '';
   if (!device) {
@@ -916,6 +1035,7 @@ async function Run() {
   Run2();
 }
 
+//Common for all forms of communication
 async function Run2() {
   document.getElementById('while_connected').style.visibility='visible';  
   document.getElementById('while_disconnected').style.visibility='hidden';  
@@ -948,6 +1068,7 @@ async function Run2() {
   DoRunLoop()
 }
 
+//WebUSB
 async function RunUSB() {
   document.getElementById('EMSG').innerHTML = '';
   var filters = [
@@ -1034,6 +1155,10 @@ async function GetList(cmd) {
 async function Loop() {
   while (true) {
     const preset = await Send("get_preset");
+	if (preset == -1){ //might happen after deletion of a preset
+	  SetPreset(0);
+	  preset = await Send("get_preset");
+	}
     showCurrentPreset(preset);
 
     var current_track = await Send("get_track");
@@ -1045,6 +1170,9 @@ async function Loop() {
 
     const voltage = await Send("battery_voltage");
     document.getElementById('voltage').innerHTML = voltage;
+
+    const dim = await Send("get_dim");//might not be available
+    if (dim != "") {has_dimblade = true};
 
     const on = await Send("get_on");
     if (parseInt(on)) {
@@ -1077,25 +1205,36 @@ async function Loop() {
       }
       document.getElementById('tracks').innerHTML = track_string;
       font_lines = await GetList("list_fonts");
+      dir_lines = await GetList("dir");
+      for (var l = 0; l < dir_lines.length; l++) {
+        var tmp = dir_lines[l].split(" ");
+        if (tmp.length == 2 && tmp[1] == "0") {
+          dir_lines[l]=tmp[0];
+        }else{
+          dir_lines.splice(l,1); //remove line that is not a directory
+          l -= 1; // because we shifted down we need to check value on same position
+        }
+      }	  
+      dir_lines.unshift("none");//insert none to front of list
       style_lines = await GetList("list_named_styles");
       named_styles = { };
       for (var i = 0; i < style_lines.length; i++) {
-	 console.log(style_lines[i]);
+       console.log(style_lines[i]);
          var desc = await GetList("describe_named_style "+style_lines[i]);
-	 console.log(desc);
-	 console.log(desc[0]);
-	 var args = desc[0].split(",");
-	 var arguments = [];
-	 for (var j = 1; j < desc.length; j++) {
+       console.log(desc);
+       console.log(desc[0]);
+       var args = desc[0].split(",");
+       var arguments = [];
+       for (var j = 1; j < desc.length; j++) {
            var default_arguments = desc[j].split(" ");
-	   // TYPE, DESC, DEFAULT
-	   arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
-	 }
-	 named_styles[style_lines[i]] = {
-	   NAME : style_lines[i],
-	   DESC : args[0],
-	   ARGS : arguments
-	 };
+         // TYPE, DESC, DEFAULT
+         arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
+       }
+       named_styles[style_lines[i]] = {
+       NAME : style_lines[i],
+       DESC : args[0],
+       ARGS : arguments
+       };
       }
 
       if (named_styles["builtin"]) {
@@ -1129,12 +1268,12 @@ function Init() {
 </script>
 <span class=pwbox id=while_disconnected>
   <div id=connect_usb style='visibility:hidden;' class=control>
-     <button class=mybutton type=button onclick='RunUSB()'>usb</button><br>
+     <button class=mybutton type=button onclick='RunUSB()'>web usb</button><br>
   </div>
   <div id=connect_ble style='visibility:hidden;'>
     <span id=pwspan style='display:none'>Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (event.keyCode == 13) Run();"></span>
     <div class=control>
-      <button class=mybutton type=button onclick='Run()'>BLE</button>
+      <button class=mybutton type=button onclick='Run()'>web BLE</button>
     </div>
     <br>
   </div>
@@ -1150,7 +1289,9 @@ function Init() {
 <div class="top" id=top_message>
   <div class=editbutton  style='visibility:hidden;' id=editbutton onclick='ToggleEditMode()'>&#x270E;</div>
   <div class=appname>Proffieos Control</div><br/>
-  Volume: <input id=volume type=range min=0 max=2000 oninput='UpdateVolume();' onchange='UpdateVolume();'>
+	  <div class="slidecontainer">
+	  Volume: <input id=volume type=range min=0 max=2000 class="slider" style="width:50%" oninput='UpdateVolume();' onchange='UpdateVolume();'>
+	  </div>
   Battery: <span id=voltage>---</span> volts.
   <span id=reconnecting_message style='visibility:hidden;'>
     Reconnecting...
@@ -1213,6 +1354,15 @@ function Init() {
     </div>
     <div class=control>
        <span class=title onclick='Send("drag");'>drag</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("melt");'>melt</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("stab");'>stab</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("lblock");'>lightning</span>
     </div>
     <div class=control>
        <span class=title onclick='Send("stop_track");'>stop track</span>
