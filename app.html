@@ -539,6 +539,7 @@ function SaveStyle(blade) {
   ret = ret.join(" ");
   presets[current_preset_num]["STYLE"+blade] = ret;
   Send("set_style"+blade+ " " + ret);
+  SetPreset(current_preset_num) //to make sure it takes immediate effect
 }
 
 function SaveName() {
@@ -562,6 +563,7 @@ function SaveFont() {
   if (presets[current_preset_num].FONT != font_select.value) {
     presets[current_preset_num].FONT = font_select.value;
     Send("set_font " + font_select.value);
+    SetPreset(current_preset_num) //to make sure it takes immediate effect
   }
 }
 
@@ -578,6 +580,7 @@ function SaveTrack() {
   if (presets[current_preset_num].TRACK != track_select.value) {
     presets[current_preset_num].TRACK = track_select.value;
     Send("set_track " + track_select.value);
+    SetPreset(current_preset_num) //to make sure it takes immediate effect
   }
 }
 
