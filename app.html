@@ -675,9 +675,12 @@ async function DropEvent(n) {
 }
 
 async function AddPreset() {
+  var r = confirm("Duplicate current preset?");
+  if (r == true) {
   Send("duplicate_preset " + presets.length);
   presets.push(Object.assign({}, presets[current_preset_num]));
   UpdatePresets();
+  }
 }
 
 async function DelPreset() {
@@ -690,6 +693,13 @@ async function DelPreset() {
     SetPreset(0);
   }
   UpdatePresets();
+}
+
+async function DelConfirm() {
+  var r = confirm("Delete current preset?");
+  if (r == true) {
+    DelPreset();
+  } 
 }
 
 async function PlayTrack(track) {
@@ -873,7 +883,7 @@ function UpdatePresets() {
     preset_string += "<div class=preset onclick='AddPreset()'>";
     preset_string += "<span class=title2>+</span>";
     preset_string += "</div>";
-    preset_string += "<div class=preset ondrop='DelPreset()'>";
+    preset_string += "<div class=preset ondrop='DelPreset()' onclick=DelConfirm()>";
     preset_string += "<span class=title2>&#x1F5D1;</span>";
     preset_string += "</div>";
   }
