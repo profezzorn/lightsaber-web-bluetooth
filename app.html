@@ -276,6 +276,7 @@ var track_lines;
 var font_lines;
 var style_lines;
 var named_styles = {};
+var track_string = "";
 var tracks_listed = false;
 
 function SendNext() {
@@ -636,15 +637,17 @@ async function Off() {
 }
 
 function showCurrentTrack(track) {
-// FIXME
-//  const preset_tags = document.getElementsByClassName('track');
-//  for (var i = 0; i < track_lines.length; i++) {
-//    if (track_lines[i] == track) {
-//      track_tags[i].style.background = '#505080';
-//    } else {
-//      track_tags[i].style.background = '#101040';
-//    }
-//  }
+// FIXME -> fixed!!
+ if (track_string != ""){
+    const track_tags = document.getElementsByClassName('track');
+    for (var i = 0; i < track_lines.length; i++) {
+        if (track_lines[i] == track) {
+          track_tags[i].style.background = '#505080';
+        } else {
+         track_tags[i].style.background = '#101040';
+        }
+    }
+  }
 }
 
 async function SetPreset(n) {
