@@ -274,6 +274,8 @@ var status_cb;
 var buffer = "";
 var track_lines;
 var font_lines;
+var dir_lines;
+var common_lines;
 var style_lines;
 var named_styles = {};
 var tracks_listed = false;
@@ -558,16 +560,37 @@ function make_name_field(value) {
 
 function SaveFont() {
   var font_select = document.getElementById('font_select');
-  console.log("SAVE FONT " + font_select.value);
-  if (presets[current_preset_num].FONT != font_select.value) {
-    presets[current_preset_num].FONT = font_select.value;
-    Send("set_font " + font_select.value);
+  var addon_select = document.getElementById('font_select2');
+  var font_path = font_select.value;
+  if (addon_select.value != "none"){
+    font_path += ";" + addon_select.value;
+  }
+  console.log("SAVE FONT " + font_path);
+  if (presets[current_preset_num].FONT != font_path) {
+    presets[current_preset_num].FONT = font_path;
+    Send("set_font " + font_path);
   }
 }
 
 function make_font_field(value) {
-  ret="<div class=edit-select><span class=title>font<br><select class=myselect id=font_select name=font_select onchange='SaveFont()'>";
-  ret+= make_select(font_lines, value);
+  var tmp = value.split(";");
+  var font_ = value;
+  var addon_ = "none"
+  if (tmp.length > 1){
+    for (var i = 0; i < font_lines.length; i++) {
+      if (tmp[0] == font_lines[i]) { font_ = tmp[0];value = tmp[1];}
+      if (tmp[1] == font_lines[i]) { font_ = tmp[1];value = tmp[0];}
+    }
+    for (var i = 0; i < dir_lines.length; i++) {
+      if (value == dir_lines[i]) { addon_ = value;}
+    }
+  }
+  ret ="<div class=edit_tall><span class=title>soundfont<br><br><select class=myselect id=font_select name=font_select onchange='SaveFont()'>";
+  ret += make_select(font_lines, font_);
+  ret += "</select>";
+  ret += "<p class=myselect>additional folder</p>";
+  ret +="<select class=myselect id=font_select2 name=font_select2 onchange='SaveFont()'>";
+  ret += make_select(dir_lines, addon_);
   ret += "</select></span></div>\n";
   return ret;
 }
@@ -592,8 +615,8 @@ function updateEditPane(preset) {
   // TODO: We shouldn't do this part every 5 seconds!
   var tmp = "";
   tmp += make_name_field(presets[preset].NAME);
-  tmp += make_font_field(presets[preset].FONT);
   tmp += make_track_field(presets[preset].TRACK);
+  tmp += make_font_field(presets[preset].FONT);
   for (var blade = 1; presets[preset]["STYLE" + blade]; blade++) {
     tmp += make_style_field(blade , presets[preset]["STYLE" + blade]);
   }
@@ -1077,6 +1100,17 @@ async function Loop() {
       }
       document.getElementById('tracks').innerHTML = track_string;
       font_lines = await GetList("list_fonts");
+      dir_lines = await GetList("dir");
+      for (var l = 0; l < dir_lines.length; l++) {
+          var tmp = dir_lines[l].split(" ");
+          if (tmp.length == 2 && tmp[1] == "0") {
+          dir_lines[l]=tmp[0];
+          }else{
+             dir_lines.splice(l,1); //remove line that is not a directory
+             l -= 1; // because we shifted down we need to check value on same position
+          }
+      }	  
+      dir_lines.unshift("none");//insert none to front of list
       style_lines = await GetList("list_named_styles");
       named_styles = { };
       for (var i = 0; i < style_lines.length; i++) {
