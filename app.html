@@ -562,7 +562,7 @@ function SaveFont() {
   var font_select = document.getElementById('font_select');
   var addon_select = document.getElementById('font_select2');
   var font_path = font_select.value;
-  if (addon_select.value != "none"){
+  if (addon_select.value != "none") {
     font_path += ";" + addon_select.value;
   }
   console.log("SAVE FONT " + font_path);
@@ -576,11 +576,17 @@ function make_font_field(value) {
   var tmp = value.split(";");
   var font_ = value;
   var addon_ = "none"
-  if (tmp.length > 1){
+  if (tmp.length > 1) {
     for (var i = 0; i < font_lines.length; i++) {
-      if (tmp[0] == font_lines[i]) { font_ = tmp[0];value = tmp[1];}
-      if (tmp[1] == font_lines[i]) { font_ = tmp[1];value = tmp[0];}
+      // if you have a path specified as Soundfont;common, check is there is a Soundfontin tmp[0], 
+      // if found we need to check if the common folder exists, put it in value for now
+      if (tmp[0] == font_lines[i]) { font_ = tmp[0]; value = tmp[1];} 
+      // if you have a path specified as common;Soundfont, check is there is a Soundfontin tmp[1], 
+      // if found we need to check if the common folder exists, put it in value for now
+      if (tmp[1] == font_lines[i]) { font_ = tmp[1]; value = tmp[0];}
     }
+	//check if common folder exists, if tmp.length was 1, value should have remained "none"
+	//if not found, addon also remains "none"
     for (var i = 0; i < dir_lines.length; i++) {
       if (value == dir_lines[i]) { addon_ = value;}
     }
