@@ -1034,6 +1034,10 @@ async function GetList(cmd) {
 async function Loop() {
   while (true) {
     const preset = await Send("get_preset");
+    if (preset == -1){ //might happen after deletion of a preset
+      SetPreset(0);
+      preset = await Send("get_preset");
+    }  
     showCurrentPreset(preset);
 
     var current_track = await Send("get_track");
