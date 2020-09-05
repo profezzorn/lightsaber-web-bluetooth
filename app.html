@@ -677,9 +677,9 @@ async function DropEvent(n) {
 async function AddPreset() {
   var r = confirm("Duplicate current preset?");
   if (r == true) {
-  Send("duplicate_preset " + presets.length);
-  presets.push(Object.assign({}, presets[current_preset_num]));
-  UpdatePresets();
+    Send("duplicate_preset " + presets.length);
+    presets.push(Object.assign({}, presets[current_preset_num]));
+    UpdatePresets();
   }
 }
 
