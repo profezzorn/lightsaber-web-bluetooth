@@ -234,6 +234,32 @@ input[type="color"].custom {
   vertical-align: middle;
 }
 
+.slidecontainer {
+  width: 100%;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 15px;
+  border-radius: 5px;
+  background: #f0f0f0;
+  outline: none;
+  opacity: 1;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #1000ff;
+  cursor: pointer;
+}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="msapplication-TileImage" content="icon.png">
@@ -1154,7 +1180,9 @@ function Init() {
 <div class="top" id=top_message>
   <div class=editbutton  style='visibility:hidden;' id=editbutton onclick='ToggleEditMode()'>&#x270E;</div>
   <div class=appname>Proffieos Control</div><br/>
-  Volume: <input id=volume type=range min=0 max=2000 oninput='UpdateVolume();' onchange='UpdateVolume();'>
+      <div class="slidecontainer">
+      Volume: <input id=volume type=range min=0 max=2000 class="slider" style="width:50%" oninput='UpdateVolume();' onchange='UpdateVolume();'>
+      </div>
   Battery: <span id=voltage>---</span> volts.
   <span id=reconnecting_message style='visibility:hidden;'>
     Reconnecting...
