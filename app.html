@@ -277,7 +277,7 @@ var font_lines;
 var style_lines;
 var named_styles = {};
 var tracks_listed = false;
-
+var has_dimblade = false;
 function SendNext() {
   if (!current_packet) {
     if (!send_buf.length) {
@@ -556,6 +556,22 @@ function make_name_field(value) {
   return "<div class=edit><span class=title>name<br><input type=text class=myinput id=name_input value='"+value+"' onchange='SaveName()'></span></div>\n";
 }
 
+function SaveBrightness() {
+  var font_select = document.getElementById('brightness_slider');
+  console.log("SAVE BRIGHTNESS " + brightness_slider.value);
+  brightness_ = brightness_slider.value;
+  Send("dim " + brightness_slider.value);
+}
+
+var brightness_ =100;
+
+function make_brightness_field(value) {
+  var ret = "<div class=edit>";
+  ret += "<span class=title>brightness<br><br><input type=range min=0 max=100 class=slider id=brightness_slider value='"+value+"' onchange='SaveBrightness()'>";
+  ret += "</span></div>\n"; 
+  return ret;
+}
+
 function SaveFont() {
   var font_select = document.getElementById('font_select');
   console.log("SAVE FONT " + font_select.value);
@@ -598,6 +614,7 @@ function updateEditPane(preset) {
     tmp += make_style_field(blade , presets[preset]["STYLE" + blade]);
   }
   var edit_pane = document.getElementById('edit_pane2');
+  if (has_dimblade) {tmp += make_brightness_field(brightness_);}
   console.log(edit_pane);  
   edit_pane.innerHTML = tmp;
 }
@@ -1045,6 +1062,9 @@ async function Loop() {
 
     const voltage = await Send("battery_voltage");
     document.getElementById('voltage').innerHTML = voltage;
+
+    const dim = await Send("get_dim");//might not be available
+    if (dim != "") {has_dimblade = true};
 
     const on = await Send("get_on");
     if (parseInt(on)) {
