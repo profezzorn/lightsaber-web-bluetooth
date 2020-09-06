@@ -585,8 +585,8 @@ function make_font_field(value) {
       // if found we need to check if the common folder exists, put it in value for now
       if (tmp[1] == font_lines[i]) { font_ = tmp[1]; value = tmp[0];}
     }
-	//check if common folder exists, if tmp.length was 1, value should have remained "none"
-	//if not found, addon also remains "none"
+    //check if common folder exists, if tmp.length was 1, value should have remained "none"
+    //if not found, addon also remains "none"
     for (var i = 0; i < dir_lines.length; i++) {
       if (value == dir_lines[i]) { addon_ = value;}
     }
