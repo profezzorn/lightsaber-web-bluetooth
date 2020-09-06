@@ -1097,10 +1097,10 @@ async function Loop() {
       document.getElementById('onbutton').style.background = '#101040';
     }
 
-    // Listing tracks tends to interrupt whatever is currently playing so
-    // let's wait until the saber is off and not playing a track before
-    // we fetch the list of tracks.
-    if (tracks_listed == false && parseInt(on) == 0 && current_track == "") {
+    // It will give a short click, but only the first time, after track_list has been populated
+    // this is no longer executed. It is annoying if tracks are not shown, when connecting
+    // with a inited or track_playing saber. Looks like the app is broken...
+    if (tracks_listed == false) {
       tracks_listed = true;
       track_lines = await GetList("list_tracks");
       track_string = "";
