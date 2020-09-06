@@ -129,6 +129,7 @@
   color: #FFFFFF;
   border: 0px;
   text-align: center;
+  text-align-last:center;
 }
 
 .myinput {
@@ -150,7 +151,7 @@
 
 .mybutton {
   font-family: StarJedi;
-  font-size: 130%;
+  font-size: 110%;
   line-height: 0.8;
   background: #101040;
   color: #FFFFFF;
@@ -268,6 +269,7 @@ input[type="color"].custom {
   cursor: pointer;
 }
 
+
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="msapplication-TileImage" content="icon.png">
@@ -311,6 +313,7 @@ var track_lines;
 var font_lines;
 var style_lines;
 var named_styles = {};
+var track_string = "";
 var tracks_listed = false;
 
 function SendNext() {
@@ -574,6 +577,7 @@ function SaveStyle(blade) {
   ret = ret.join(" ");
   presets[current_preset_num]["STYLE"+blade] = ret;
   Send("set_style"+blade+ " " + ret);
+  SetPreset(current_preset_num) //to make sure it takes immediate effect
 }
 
 function SaveName() {
@@ -648,6 +652,7 @@ function SaveFont() {
   if (presets[current_preset_num].FONT != font_select.value) {
     presets[current_preset_num].FONT = font_select.value;
     Send("set_font " + font_select.value);
+    SetPreset(current_preset_num) //to make sure it takes immediate effect
   }
 }
 
@@ -664,6 +669,7 @@ function SaveTrack() {
   if (presets[current_preset_num].TRACK != track_select.value) {
     presets[current_preset_num].TRACK = track_select.value;
     Send("set_track " + track_select.value);
+    SetPreset(current_preset_num) //to make sure it takes immediate effect
   }
 }
 
@@ -723,15 +729,16 @@ async function Off() {
 }
 
 function showCurrentTrack(track) {
-// FIXME
-//  const preset_tags = document.getElementsByClassName('track');
-//  for (var i = 0; i < track_lines.length; i++) {
-//    if (track_lines[i] == track) {
-//      track_tags[i].style.background = '#505080';
-//    } else {
-//      track_tags[i].style.background = '#101040';
-//    }
-//  }
+ if (track_string != "") {
+    const track_tags = document.getElementsByClassName('track');
+    for (var i = 0; i < track_lines.length; i++) {
+        if (track_lines[i] == track) {
+          track_tags[i].style.background = '#505080';
+        } else {
+         track_tags[i].style.background = '#101040';
+        }
+    }
+  }
 }
 
 async function SetPreset(n) {
@@ -762,9 +769,12 @@ async function DropEvent(n) {
 }
 
 async function AddPreset() {
-  Send("duplicate_preset " + presets.length);
-  presets.push(Object.assign({}, presets[current_preset_num]));
-  UpdatePresets();
+  var r = confirm("Duplicate current preset?");
+  if (r == true) {
+    Send("duplicate_preset " + presets.length);
+    presets.push(Object.assign({}, presets[current_preset_num]));
+    UpdatePresets();
+  }
 }
 
 async function DelPreset() {
@@ -777,6 +787,13 @@ async function DelPreset() {
     SetPreset(0);
   }
   UpdatePresets();
+}
+
+async function DelConfirm() {
+  var r = confirm("Delete current preset?");
+  if (r == true) {
+    DelPreset();
+  } 
 }
 
 async function PlayTrack(track) {
@@ -960,7 +977,7 @@ function UpdatePresets() {
     preset_string += "<div class=preset onclick='AddPreset()'>";
     preset_string += "<span class=title2>+</span>";
     preset_string += "</div>";
-    preset_string += "<div class=preset ondrop='DelPreset()'>";
+    preset_string += "<div class=preset ondrop='DelPreset()' onclick=DelConfirm()>";
     preset_string += "<span class=title2>&#x1F5D1;</span>";
     preset_string += "</div>";
   }
@@ -1142,10 +1159,10 @@ async function Loop() {
       document.getElementById('onbutton').style.background = '#101040';
     }
 
-    // Listing tracks tends to interrupt whatever is currently playing so
-    // let's wait until the saber is off and not playing a track before
-    // we fetch the list of tracks.
-    if (tracks_listed == false && parseInt(on) == 0 && current_track == "") {
+    // It will give a short click, but only the first time, after track_list has been populated
+    // this is no longer executed. It is annoying if tracks are not shown, when connecting
+    // with a inited or track_playing saber. Looks like the app is broken...
+    if (tracks_listed == false) {
       tracks_listed = true;
       track_lines = await GetList("list_tracks");
       track_string = "";
@@ -1237,7 +1254,9 @@ function Init() {
 <div class="top" id=top_message>
   <div class=editbutton  style='visibility:hidden;' id=editbutton onclick='ToggleEditMode()'>&#x270E;</div>
   <div class=appname>Proffieos Control</div><br/>
-  Volume: <input id=volume type=range min=0 max=2000 oninput='UpdateVolume();' onchange='UpdateVolume();'>
+      <div class="slidecontainer">
+      Volume: <input id=volume type=range min=0 max=2000 class="slider" style="width:50%" oninput='UpdateVolume();' onchange='UpdateVolume();'>
+      </div>
   Battery: <span id=voltage>---</span> volts.
   <span id=reconnecting_message style='visibility:hidden;'>
     Reconnecting...
@@ -1300,6 +1319,15 @@ function Init() {
     </div>
     <div class=control>
        <span class=title onclick='Send("drag");'>drag</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("melt");'>melt</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("stab");'>stab</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("lblock");'>lightning</span>
     </div>
     <div class=control>
        <span class=title onclick='Send("stop_track");'>stop track</span>
