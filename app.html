@@ -140,7 +140,7 @@
   text-align: center;
 }
 
-.myinput2{ 
+.myinput2 { 
   background: #101040;
   color: #FFFFFF;
   text-align: center;
@@ -617,13 +617,13 @@ function SetVariation() {
   SaveVariation(); // now do the actual update
 }
 
-function UpdateVariation(value){
+function UpdateVariation(value) {
   value = parseInt(value, 10);
   var set_variation_slider = document.getElementById('variation_slider');
   var set_variation_field = document.getElementById('variation_field');
   var tmp = parseInt(set_variation_field.value, 10);
   tmp += value;
-  tmp = tmp <= 0 ? 32767 : tmp >= 32767 ? 0 : tmp;  //clamp between min and max slider value, rollover to 0 when too high, rollback to 32767 when negative 
+  tmp &= 32767;  //clamp between min and max slider value, rollover to 0 when too high, rollback to 32767 when negative 
   console.log("SET VARIATION " + tmp);
   set_variation_slider.value = tmp;
   set_variation_field.value = tmp;
