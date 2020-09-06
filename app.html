@@ -141,6 +141,14 @@
   text-align: center;
 }
 
+.myinput2 { 
+  background: #101040;
+  color: #FFFFFF;
+  text-align: center;
+  display:inline-block; 
+  vertical-align:top; 
+  }
+
 .mybutton {
   font-family: StarJedi;
   font-size: 110%;
@@ -260,6 +268,8 @@ input[type="color"].custom {
   background: #1000ff;
   cursor: pointer;
 }
+
+
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="msapplication-TileImage" content="icon.png">
@@ -585,6 +595,57 @@ function make_name_field(value) {
   return "<div class=edit><span class=title>name<br><input type=text class=myinput id=name_input value='"+value+"' onchange='SaveName()'></span></div>\n";
 }
 
+
+function SaveVariation() {
+  var variation_slider = document.getElementById('variation_slider');
+  console.log("SAVE VARIATION " + variation_slider.value);
+  if (presets[current_preset_num].VARIATION != variation_slider.value) {
+    presets[current_preset_num].VARIATION = variation_slider.value;
+    Send("variation " + variation_slider.value);
+  }
+  var variation_field = document.getElementById('variation_field');
+  if ( variation_field.value != variation_slider.value){
+     variation_field.value = variation_slider.value; //update numeric value when altered by slider
+  }
+  const preset_tags = document.getElementsByClassName('preset');
+  //	SetPreset(current_preset_num) //no need, variation is always updates directly
+  UpdatePresets();  
+}
+
+
+function SetVariation() {
+  var set_variation_field = document.getElementById('variation_field');
+  console.log("SET VARIATION " + set_variation_field.value);
+  var set_variation_slider = document.getElementById('variation_slider');
+  set_variation_slider.value = set_variation_field.value;
+  SaveVariation(); // now do the actual update
+}
+
+function UpdateVariation(value) {
+  value = parseInt(value, 10);
+  var set_variation_slider = document.getElementById('variation_slider');
+  var set_variation_field = document.getElementById('variation_field');
+  var tmp = parseInt(set_variation_field.value, 10);
+  tmp += value;
+  tmp &= 32767;  //clamp between min and max slider value, rollover to 0 when too high, rollback to 32767 when negative 
+  console.log("SET VARIATION " + tmp);
+  set_variation_slider.value = tmp;
+  set_variation_field.value = tmp;
+  SaveVariation(); // now do the actual update
+}
+
+
+function make_variation_field(value) {
+  var ret = "<div class=edit>";
+  ret += "<span class=title>variation<br><br><input type=range min=0 max=32767 class=slider id=variation_slider value='"+value+"' onchange='SaveVariation()'>";
+  ret += "<br><br>";
+  ret += "<input class=myinput2 type='button' id=variation_decrease value='-' onclick='UpdateVariation(-1)' />";
+  ret += "<input class=myinput2 type='number' id=variation_field onchange='SetVariation()' value="+value+" />";
+  ret += "<input class=myinput2 type='button' id=variation_increase value='+' onclick='UpdateVariation(1)' />"; 
+  ret += "</span></div>\n"; 
+  return ret;
+}
+
 function SaveFont() {
   var font_select = document.getElementById('font_select');
   console.log("SAVE FONT " + font_select.value);
@@ -629,6 +690,7 @@ function updateEditPane(preset) {
     tmp += make_style_field(blade , presets[preset]["STYLE" + blade]);
   }
   var edit_pane = document.getElementById('edit_pane2');
+  tmp += make_variation_field(presets[preset].VARIATION);
   console.log(edit_pane);  
   edit_pane.innerHTML = tmp;
 }
