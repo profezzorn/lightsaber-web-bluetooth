@@ -140,6 +140,14 @@
   text-align: center;
 }
 
+.myinput2{ 
+  background: #101040;
+  color: #FFFFFF;
+  text-align: center;
+  display:inline-block; 
+  vertical-align:top; 
+  }
+
 .mybutton {
   font-family: StarJedi;
   font-size: 130%;
@@ -609,10 +617,27 @@ function SetVariation() {
   SaveVariation(); // now do the actual update
 }
 
+function UpdateVariation(value){
+  value = parseInt(value, 10);
+  var set_variation_slider = document.getElementById('variation_slider');
+  var set_variation_field = document.getElementById('variation_field');
+  var tmp = parseInt(set_variation_field.value, 10);
+  tmp += value;
+  tmp = tmp <= 0 ? 32767 : tmp >= 32767 ? 0 : tmp;  //clamp between min and max slider value, rollover to 0 when too high, rollback to 32767 when negative 
+  console.log("SET VARIATION " + tmp);
+  set_variation_slider.value = tmp;
+  set_variation_field.value = tmp;
+  SaveVariation(); // now do the actual update
+}
+
+
 function make_variation_field(value) {
   var ret = "<div class=edit>";
   ret += "<span class=title>variation<br><br><input type=range min=0 max=32767 class=slider id=variation_slider value='"+value+"' onchange='SaveVariation()'>";
-  ret += "<br><br><input type=text id=variation_field class=myinput onchange='SetVariation()' value="+value+">"; 
+  ret += "<br><br>";
+  ret += "<input class=myinput2 type='button' id=variation_decrease value='-' onclick='UpdateVariation(-1)' />";
+  ret += "<input class=myinput2 type='number' id=variation_field onchange='SetVariation()' value="+value+" />";
+  ret += "<input class=myinput2 type='button' id=variation_increase value='+' onclick='UpdateVariation(1)' />"; 
   ret += "</span></div>\n"; 
   return ret;
 }
