@@ -123,12 +123,14 @@
 }
 
 .myselect {
-  font-family: StarJedi;
+//  font-family: StarJedi;
+  font-family: Arial;
   font-size: 80%;
   background: #101040;
   color: #FFFFFF;
   border: 0px;
   text-align: center;
+  text-align-last:center;
 }
 
 .myinput {
@@ -142,7 +144,7 @@
 
 .mybutton {
   font-family: StarJedi;
-  font-size: 130%;
+  font-size: 110%;
   line-height: 0.8;
   background: #101040;
   color: #FFFFFF;
@@ -249,6 +251,13 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <script>
+
+//if you want to run this page locally without internet support, you can download teh code and put it in a local directory
+//BLE connection will work straight away, even from a local connection
+//WebUSB requires a local http-server, node.js has a very simple easy to use http-server https://www.npmjs.com/package/http-server
+//go to the directory were the app.html is, and open an cmd window here.
+//usage:  http-server ./ -p 8081 -c-1 --cors 
+//then browse to http://localhost:8081/app.html
 
 let serviceUuid = '713d0000-389c-f637-b1d7-91b361ae7678';
 
@@ -558,47 +567,72 @@ function make_name_field(value) {
   return "<div class=edit><span class=title>name<br><input type=text class=myinput id=name_input value='"+value+"' onchange='SaveName()'></span></div>\n";
 }
 
+var font_folder_count;
+
 function SaveFont() {
-  var font_select = document.getElementById('font_select');
-  var addon_select = document.getElementById('font_select2');
-  var font_path = font_select.value;
-  if (addon_select.value != "none") {
-    font_path += ";" + addon_select.value;
+  var font_select = "";
+  var font_path = "";
+  for (var i = 1; i <= font_folder_count; i++) {
+    var font_select = document.getElementById('font_select'+i).value;
+    // when changed; set to selected, otherwise adding folders might reset it to the originl 'selected' value
+    document.getElementById('font_select'+i).innerHTML = make_select(dir_lines, font_select);
+    if (font_select != "none") {
+      if ( i > 1) { font_path += ";" ; }
+      font_path += font_select; 
+    }      
   }
   console.log("SAVE FONT " + font_path);
   if (presets[current_preset_num].FONT != font_path) {
     presets[current_preset_num].FONT = font_path;
     Send("set_font " + font_path);
+	make_font_field(font_path);
   }
+}
+
+function ordinal_suffix_of(i) {
+    var j = i % 10,
+        k = i % 100;
+    if (j == 1 && k != 11) {
+        return i + "st";
+    }
+    if (j == 2 && k != 12) {
+        return i + "nd";
+    }
+    if (j == 3 && k != 13) {
+        return i + "rd";
+    }
+    return i + "th";
 }
 
 function make_font_field(value) {
   var tmp = value.split(";");
-  var font_ = value;
-  var addon_ = "none"
-  if (tmp.length > 1) {
-    for (var i = 0; i < font_lines.length; i++) {
-      // if you have a path specified as Soundfont;common, check is there is a Soundfontin tmp[0], 
-      // if found we need to check if the common folder exists, put it in value for now
-      if (tmp[0] == font_lines[i]) { font_ = tmp[0]; value = tmp[1];} 
-      // if you have a path specified as common;Soundfont, check is there is a Soundfontin tmp[1], 
-      // if found we need to check if the common folder exists, put it in value for now
-      if (tmp[1] == font_lines[i]) { font_ = tmp[1]; value = tmp[0];}
-    }
-    //check if common folder exists, if tmp.length was 1, value should have remained "none"
-    //if not found, addon also remains "none"
-    for (var i = 0; i < dir_lines.length; i++) {
-      if (value == dir_lines[i]) { addon_ = value;}
-    }
+  font_folder_count = tmp.length;
+  var height_ = (300 + font_folder_count*80);
+  ret ="<div class=edit_tall id=font_field style='height:"+height_+"px'><span class=title>soundfont searchpath<br><br>";
+  for (var i = 1; i <= tmp.length; i++) {
+      ret += "<label class=myselect for='font_select"+i+" '>"
+      ret += ordinal_suffix_of(i);
+      ret += " : </label><select class=myselect id=font_select"+i+" name=font_select"+i+" onchange='SaveFont()'>";
+      ret += make_select(dir_lines, tmp[i-1]);
+      ret += "</select><br><br>";
   }
-  ret ="<div class=edit_tall><span class=title>soundfont<br><br><select class=myselect id=font_select name=font_select onchange='SaveFont()'>";
-  ret += make_select(font_lines, font_);
-  ret += "</select>";
-  ret += "<p class=myselect>additional folder</p>";
-  ret +="<select class=myselect id=font_select2 name=font_select2 onchange='SaveFont()'>";
-  ret += make_select(dir_lines, addon_);
-  ret += "</select></span></div>\n";
+  ret += "<p class=myselect id=plus_ onclick='add_font_field()'>(add folder)<br>+</p></span>"; //use innerHTML to adjust nr of search folders
+  ret += "</div>\n";
   return ret;
+}
+
+function add_font_field() {
+ var tmp =  document.getElementById("font_field").innerHTML.split("<p");
+  font_folder_count++;
+  tmp[0] += "<label class=myselect for='font_select" +font_folder_count+" '>"
+  tmp[0] += ordinal_suffix_of(font_folder_count);
+  tmp[0] += " : </label><select class=myselect id=font_select"+font_folder_count+" name=font_select"+font_folder_count+" onchange='SaveFont()'>";
+  tmp[0] += make_select(dir_lines, "none");
+  tmp[0] += "</select><br><br>";
+  tmp[0] += "<p"; // because we split it here, we need to re-add this
+  document.getElementById("font_field").innerHTML = tmp[0] + tmp[1];
+  document.getElementById("font_field").style.height = (300 + font_folder_count*80) + "px";
+  
 }
 
 function SaveTrack() {
@@ -914,7 +948,7 @@ function UpdatePresets() {
 var UARTs = {
   '713d0000-389c-f637-b1d7-91b361ae7678' : { rx:'713d0002-389c-f637-b1d7-91b361ae7678', tx:'713d0003-389c-f637-b1d7-91b361ae7678',   // my own special blend
                                              pw:'713d0004-389c-f637-b1d7-91b361ae7678', status:'713d0005-389c-f637-b1d7-91b361ae7678' },
-					     
+                         
   "6e400001-b5a3-f393-e0a9-e50e24dcca9e" : { rx:"6e400002-b5a3-f393-e0a9-e50e24dcca9e", tx:"6e400003-b5a3-f393-e0a9-e50e24dcca9e"},  //Nordic
   "49535343-fe7d-4ae5-8fa9-9fafd205e455" : { rx:"49535343-8841-43f4-a8d4-ecbe34729bb3", tx:"49535343-1e4d-4bd9-ba61-23c647249616"},  //ISSC
   "0000fff0-0000-1000-8000-00805f9b34fb" : { rx:"0000fff1-0000-1000-8000-00805f9b34fb", tx:"0000fff2-0000-1000-8000-00805f9b34fb"},  //ISSC Trandparent
@@ -1115,27 +1149,33 @@ async function Loop() {
              dir_lines.splice(l,1); //remove line that is not a directory
              l -= 1; // because we shifted down we need to check value on same position
           }
-      }	  
+      }
+      dir_lines.sort(); // just nicer to see all folders alphabeticaly
+      for (var l = 0; l < presets.length; l++){
+        // no need to add single folder preset names, they will be in the list anyway
+        // only add multiple search foldere presets to 1 click slection
+        if (presets[l].FONT.split(";").length > 1) { dir_lines.unshift(presets[l].FONT); }
+      }
       dir_lines.unshift("none");//insert none to front of list
       style_lines = await GetList("list_named_styles");
       named_styles = { };
       for (var i = 0; i < style_lines.length; i++) {
-	 console.log(style_lines[i]);
+     console.log(style_lines[i]);
          var desc = await GetList("describe_named_style "+style_lines[i]);
-	 console.log(desc);
-	 console.log(desc[0]);
-	 var args = desc[0].split(",");
-	 var arguments = [];
-	 for (var j = 1; j < desc.length; j++) {
+     console.log(desc);
+     console.log(desc[0]);
+     var args = desc[0].split(",");
+     var arguments = [];
+     for (var j = 1; j < desc.length; j++) {
            var default_arguments = desc[j].split(" ");
-	   // TYPE, DESC, DEFAULT
-	   arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
-	 }
-	 named_styles[style_lines[i]] = {
-	   NAME : style_lines[i],
-	   DESC : args[0],
-	   ARGS : arguments
-	 };
+       // TYPE, DESC, DEFAULT
+       arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
+     }
+     named_styles[style_lines[i]] = {
+       NAME : style_lines[i],
+       DESC : args[0],
+       ARGS : arguments
+     };
       }
 
       if (named_styles["builtin"]) {
