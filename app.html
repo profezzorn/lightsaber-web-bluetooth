@@ -619,7 +619,6 @@ function SaveVariation() {
      variation_field.value = variation_slider.value; //update numeric value when altered by slider
   }
   const preset_tags = document.getElementsByClassName('preset');
-  //SetPreset(current_preset_num) //no need, variation is always updates directly
   UpdatePresets();  
 }
 
@@ -667,7 +666,7 @@ function SaveFont() {
     //if we have a preset font with multiple folders, skip other selections, and re-populate selection menus with preset font 
     if (font_select.split(";").length > 1) { font_path = font_select; break; } 
     if (font_select != "none") {
-      if ( i > 1) { font_path += ";" ; }
+      if ( font_path != "" ) { font_path += ";" ; }
       font_path += font_select; 
     }
   }
@@ -676,6 +675,7 @@ function SaveFont() {
     presets[current_preset_num].FONT = font_path;
     Send("set_font " + font_path);
     document.getElementById('font_field_inner').innerHTML = make_font_field(font_path, update=true); 
+    SetPreset(current_preset_num) //no need, variation is always updates directly
   }
 }
 
