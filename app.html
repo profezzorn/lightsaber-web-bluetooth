@@ -316,6 +316,7 @@ var named_styles = {};
 var track_string = "";
 var tracks_listed = false;
 var current_track; //in order for the edit track_field to know wahts is currently playing
+
 function SendNext() {
   if (!current_packet) {
     if (!send_buf.length) {
@@ -652,7 +653,7 @@ function SaveFont() {
   if (presets[current_preset_num].FONT != font_select.value) {
     presets[current_preset_num].FONT = font_select.value;
     Send("set_font " + font_select.value);
-    SetPreset(current_preset_num) //to make sure it takes immediate effect
+    SetPreset(current_preset_num); //to make sure it takes immediate effect
   }
 }
 
