@@ -315,7 +315,7 @@ var style_lines;
 var named_styles = {};
 var track_string = "";
 var tracks_listed = false;
-
+var current_track; //in order for the edit track_field to know wahts is currently playing
 function SendNext() {
   if (!current_packet) {
     if (!send_buf.length) {
@@ -669,7 +669,11 @@ function SaveTrack() {
   if (presets[current_preset_num].TRACK != track_select.value) {
     presets[current_preset_num].TRACK = track_select.value;
     Send("set_track " + track_select.value);
-    SetPreset(current_preset_num) //to make sure it takes immediate effect
+    if (current_track != "") { 
+       //something is playing, we are going to restart the track
+       PlayTrack(track_select.value);
+    }
+    //if nothing is playing, track will be updated before next time it is activated
   }
 }
 
@@ -1140,7 +1144,7 @@ async function Loop() {
     const preset = await Send("get_preset");
     showCurrentPreset(preset);
 
-    var current_track = await Send("get_track");
+    current_track = await Send("get_track");
     current_track = current_track.split("\n")[0];
     showCurrentTrack(current_track);
 
