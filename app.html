@@ -743,11 +743,7 @@ function SaveTrack() {
   if (presets[current_preset_num].TRACK != track_select.value) {
     presets[current_preset_num].TRACK = track_select.value;
     Send("set_track " + track_select.value);
-    if (current_track != "") { 
-       //something is playing, we are going to change this
-       PlayTrack(track_select.value);
-    }
-    //if nothing is playing, track will be updated before next time it is activated
+    SetPreset(current_preset_num) //to make sure it takes immediate effect
   }
 }
 
