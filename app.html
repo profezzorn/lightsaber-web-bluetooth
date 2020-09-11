@@ -142,6 +142,14 @@
   text-align: center;
 }
 
+.myinput2 { 
+  background: #101040;
+  color: #FFFFFF;
+  text-align: center;
+  display:inline-block; 
+  vertical-align:top; 
+  }
+
 .mybutton {
   font-family: StarJedi;
   font-size: 110%;
@@ -235,6 +243,34 @@ input[type="color"].custom {
   vertical-align: middle;
 }
 
+.slidecontainer {
+  width: 100%;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 15px;
+  border-radius: 5px;
+  background: #f0f0f0;
+  outline: none;
+  opacity: 1;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #1000ff;
+  cursor: pointer;
+}
+
+
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="msapplication-TileImage" content="icon.png">
@@ -287,7 +323,9 @@ var dir_lines;
 var common_lines;
 var style_lines;
 var named_styles = {};
+var track_string = "";
 var tracks_listed = false;
+var current_track; //in order for the edit track_field to know wahts is currently playing
 
 function SendNext() {
   if (!current_packet) {
@@ -550,6 +588,7 @@ function SaveStyle(blade) {
   ret = ret.join(" ");
   presets[current_preset_num]["STYLE"+blade] = ret;
   Send("set_style"+blade+ " " + ret);
+  SetPreset(current_preset_num) //to make sure it takes immediate effect
 }
 
 function SaveName() {
@@ -567,6 +606,57 @@ function make_name_field(value) {
   return "<div class=edit><span class=title>name<br><input type=text class=myinput id=name_input value='"+value+"' onchange='SaveName()'></span></div>\n";
 }
 
+
+function SaveVariation() {
+  var variation_slider = document.getElementById('variation_slider');
+  console.log("SAVE VARIATION " + variation_slider.value);
+  if (presets[current_preset_num].VARIATION != variation_slider.value) {
+    presets[current_preset_num].VARIATION = variation_slider.value;
+    Send("variation " + variation_slider.value);
+  }
+  var variation_field = document.getElementById('variation_field');
+  if ( variation_field.value != variation_slider.value){
+     variation_field.value = variation_slider.value; //update numeric value when altered by slider
+  }
+  const preset_tags = document.getElementsByClassName('preset');
+  //SetPreset(current_preset_num) //no need, variation is always updates directly
+  UpdatePresets();  
+}
+
+
+function SetVariation() {
+  var set_variation_field = document.getElementById('variation_field');
+  console.log("SET VARIATION " + set_variation_field.value);
+  var set_variation_slider = document.getElementById('variation_slider');
+  set_variation_slider.value = set_variation_field.value;
+  SaveVariation(); // now do the actual update
+}
+
+function UpdateVariation(value) {
+  value = parseInt(value, 10);
+  var set_variation_slider = document.getElementById('variation_slider');
+  var set_variation_field = document.getElementById('variation_field');
+  var tmp = parseInt(set_variation_field.value, 10);
+  tmp += value;
+  tmp &= 32767;  //clamp between min and max slider value, rollover to 0 when too high, rollback to 32767 when negative 
+  console.log("SET VARIATION " + tmp);
+  set_variation_slider.value = tmp;
+  set_variation_field.value = tmp;
+  SaveVariation(); // now do the actual update
+}
+
+
+function make_variation_field(value) {
+  var ret = "<div class=edit>";
+  ret += "<span class=title>variation<br><br><input type=range min=0 max=32767 class=slider id=variation_slider value='"+value+"' onchange='SaveVariation()'>";
+  ret += "<br><br>";
+  ret += "<input class=myinput2 type='button' id=variation_decrease value='-' onclick='UpdateVariation(-1)' />";
+  ret += "<input class=myinput2 type='number' id=variation_field onchange='SetVariation()' value="+value+" />";
+  ret += "<input class=myinput2 type='button' id=variation_increase value='+' onclick='UpdateVariation(1)' />"; 
+  ret += "</span></div>\n"; 
+  return ret;
+}
+
 var font_folder_count;
 
 function SaveFont() {
@@ -574,21 +664,22 @@ function SaveFont() {
   var font_path = "";
   for (var i = 1; i <= font_folder_count; i++) {
     var font_select = document.getElementById('font_select'+i).value;
-    // when changed; set to selected, otherwise adding folders might reset it to the originl 'selected' value
-    document.getElementById('font_select'+i).innerHTML = make_select(dir_lines, font_select);
+    //if we have a preset font with multiple folders, skip other selections, and re-populate selection menus with preset font 
+    if (font_select.split(";").length > 1) { font_path = font_select; break; } 
     if (font_select != "none") {
       if ( i > 1) { font_path += ";" ; }
       font_path += font_select; 
-    }      
+    }
   }
   console.log("SAVE FONT " + font_path);
   if (presets[current_preset_num].FONT != font_path) {
     presets[current_preset_num].FONT = font_path;
     Send("set_font " + font_path);
-	make_font_field(font_path);
+    document.getElementById('font_field_inner').innerHTML = make_font_field(font_path, update=true); 
   }
 }
 
+// make 1st,2nd, 3rd etc string
 function ordinal_suffix_of(i) {
     var j = i % 10,
         k = i % 100;
@@ -604,35 +695,46 @@ function ordinal_suffix_of(i) {
     return i + "th";
 }
 
-function make_font_field(value) {
-  var tmp = value.split(";");
-  font_folder_count = tmp.length;
-  var height_ = (300 + font_folder_count*80);
-  ret ="<div class=edit_tall id=font_field style='height:"+height_+"px'><span class=title>soundfont searchpath<br><br>";
-  for (var i = 1; i <= tmp.length; i++) {
-      ret += "<label class=myselect for='font_select"+i+" '>"
-      ret += ordinal_suffix_of(i);
-      ret += " : </label><select class=myselect id=font_select"+i+" name=font_select"+i+" onchange='SaveFont()'>";
-      ret += make_select(dir_lines, tmp[i-1]);
-      ret += "</select><br><br>";
-  }
-  ret += "<p class=myselect id=plus_ onclick='add_font_field()'>(add folder)<br>+</p></span>"; //use innerHTML to adjust nr of search folders
-  ret += "</div>\n";
+function add_font_select(value, idx){
+  ret = "<label class=myselect for='font_select"+idx+" '>";
+  ret += ordinal_suffix_of(idx);
+  ret += " : </label><select class=myselect id=font_select"+idx+" name=font_select"+idx+" onchange='SaveFont()'>";
+  ret += make_select(dir_lines, value);
+  ret += "</select><br><br>";
   return ret;
 }
 
 function add_font_field() {
- var tmp =  document.getElementById("font_field").innerHTML.split("<p");
-  font_folder_count++;
-  tmp[0] += "<label class=myselect for='font_select" +font_folder_count+" '>"
-  tmp[0] += ordinal_suffix_of(font_folder_count);
-  tmp[0] += " : </label><select class=myselect id=font_select"+font_folder_count+" name=font_select"+font_folder_count+" onchange='SaveFont()'>";
-  tmp[0] += make_select(dir_lines, "none");
-  tmp[0] += "</select><br><br>";
-  tmp[0] += "<p"; // because we split it here, we need to re-add this
-  document.getElementById("font_field").innerHTML = tmp[0] + tmp[1];
-  document.getElementById("font_field").style.height = (300 + font_folder_count*80) + "px";
-  
+  document.getElementById('font_field_inner').innerHTML = make_font_field(presets[current_preset_num].FONT, update=true, add_select=true);  
+}
+
+function make_font_field(value, update=false, add_select=false) {
+  var tmp = value.split(";");
+  font_folder_count = tmp.length;
+  //make new <div> when we are here the first time (update=false, add_select=false)
+  if (!update) {
+    var height_ = (300 + font_folder_count*80);
+    ret ="<div class=edit_tall id=font_field style='height:"+height_+"px'><span class=title id=font_field_inner>";
+  } else { //just update the innerHTML, and adjuts height
+    document.getElementById("font_field").style.height = (300 + font_folder_count*80) + "px";
+    ret = ""; 
+  }
+  //add title
+  ret += "soundfont searchpath<br><br>";
+  //add folder selections
+  for (var i = 1; i <= tmp.length; i++) {
+     ret += add_font_select(tmp[i-1], i);
+  }
+  // option: add additional selection list
+  if (add_select) { 
+    ret += add_font_select("none", i);
+    font_folder_count++ ;
+  }
+  //add 'add folder' button
+  ret += "<p class=myselect id=plus_ onclick='add_font_field()'>(add folder)<br>+</p>"; 
+  //footer
+  if (!update) { ret += "</span></div>\n"; }
+  return ret;
 }
 
 function SaveTrack() {
@@ -641,6 +743,11 @@ function SaveTrack() {
   if (presets[current_preset_num].TRACK != track_select.value) {
     presets[current_preset_num].TRACK = track_select.value;
     Send("set_track " + track_select.value);
+    if (current_track != "") { 
+       //something is playing, we are going to change this
+       PlayTrack(track_select.value);
+    }
+    //if nothing is playing, track will be updated before next time it is activated
   }
 }
 
@@ -661,6 +768,7 @@ function updateEditPane(preset) {
     tmp += make_style_field(blade , presets[preset]["STYLE" + blade]);
   }
   var edit_pane = document.getElementById('edit_pane2');
+  tmp += make_variation_field(presets[preset].VARIATION);
   console.log(edit_pane);  
   edit_pane.innerHTML = tmp;
 }
@@ -699,15 +807,16 @@ async function Off() {
 }
 
 function showCurrentTrack(track) {
-// FIXME
-//  const preset_tags = document.getElementsByClassName('track');
-//  for (var i = 0; i < track_lines.length; i++) {
-//    if (track_lines[i] == track) {
-//      track_tags[i].style.background = '#505080';
-//    } else {
-//      track_tags[i].style.background = '#101040';
-//    }
-//  }
+ if (track_string != "") {
+    const track_tags = document.getElementsByClassName('track');
+    for (var i = 0; i < track_lines.length; i++) {
+        if (track_lines[i] == track) {
+          track_tags[i].style.background = '#505080';
+        } else {
+         track_tags[i].style.background = '#101040';
+        }
+    }
+  }
 }
 
 async function SetPreset(n) {
@@ -738,9 +847,12 @@ async function DropEvent(n) {
 }
 
 async function AddPreset() {
-  Send("duplicate_preset " + presets.length);
-  presets.push(Object.assign({}, presets[current_preset_num]));
-  UpdatePresets();
+  var r = confirm("Duplicate current preset?");
+  if (r == true) {
+    Send("duplicate_preset " + presets.length);
+    presets.push(Object.assign({}, presets[current_preset_num]));
+    UpdatePresets();
+  }
 }
 
 async function DelPreset() {
@@ -753,6 +865,13 @@ async function DelPreset() {
     SetPreset(0);
   }
   UpdatePresets();
+}
+
+async function DelConfirm() {
+  var r = confirm("Delete current preset?");
+  if (r == true) {
+    DelPreset();
+  } 
 }
 
 async function PlayTrack(track) {
@@ -936,7 +1055,7 @@ function UpdatePresets() {
     preset_string += "<div class=preset onclick='AddPreset()'>";
     preset_string += "<span class=title2>+</span>";
     preset_string += "</div>";
-    preset_string += "<div class=preset ondrop='DelPreset()'>";
+    preset_string += "<div class=preset ondrop='DelPreset()' onclick=DelConfirm()>";
     preset_string += "<span class=title2>&#x1F5D1;</span>";
     preset_string += "</div>";
   }
@@ -1118,10 +1237,10 @@ async function Loop() {
       document.getElementById('onbutton').style.background = '#101040';
     }
 
-    // Listing tracks tends to interrupt whatever is currently playing so
-    // let's wait until the saber is off and not playing a track before
-    // we fetch the list of tracks.
-    if (tracks_listed == false && parseInt(on) == 0 && current_track == "") {
+    // It will give a short click, but only the first time, after track_list has been populated
+    // this is no longer executed. It is annoying if tracks are not shown, when connecting
+    // with a inited or track_playing saber. Looks like the app is broken...
+    if (tracks_listed == false) {
       tracks_listed = true;
       track_lines = await GetList("list_tracks");
       track_string = "";
@@ -1230,7 +1349,9 @@ function Init() {
 <div class="top" id=top_message>
   <div class=editbutton  style='visibility:hidden;' id=editbutton onclick='ToggleEditMode()'>&#x270E;</div>
   <div class=appname>Proffieos Control</div><br/>
-  Volume: <input id=volume type=range min=0 max=2000 oninput='UpdateVolume();' onchange='UpdateVolume();'>
+      <div class="slidecontainer">
+      Volume: <input id=volume type=range min=0 max=2000 class="slider" style="width:50%" oninput='UpdateVolume();' onchange='UpdateVolume();'>
+      </div>
   Battery: <span id=voltage>---</span> volts.
   <span id=reconnecting_message style='visibility:hidden;'>
     Reconnecting...
@@ -1293,6 +1414,15 @@ function Init() {
     </div>
     <div class=control>
        <span class=title onclick='Send("drag");'>drag</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("melt");'>melt</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("stab");'>stab</span>
+    </div>
+    <div class=control>
+       <span class=title onclick='Send("lblock");'>lightning</span>
     </div>
     <div class=control>
        <span class=title onclick='Send("stop_track");'>stop track</span>
