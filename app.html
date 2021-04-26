@@ -1036,15 +1036,11 @@ async function Run() {
 }
 
 async function Run2() {
-//  document.getElementById('while_connected').style.visibility='visible';  
-//  document.getElementById('while_disconnected').style.visibility='hidden';  
   document.getElementById('connect_usb').style.visibility='hidden';
   document.getElementById('connect_ble').style.visibility='hidden';
   document.getElementById('connect_hid').style.visibility='hidden';
   document.getElementById('EMSG').innerHTML = "Connecting..."
   
-	  document.getElementById('while_connected').style.visibility='visible';  
-	  document.getElementById('while_disconnected').style.visibility='hidden';  
   var preset;
   var preset_string;
   while (true) {
@@ -1133,9 +1129,9 @@ async function RunUSB() {
 var rawHidFilter = { vendorId: 0x16C0, productId: 0x0486, usagePage: 0xFFAB, usage: 0x0200 }; // RawHID interface
 var rawHidParams = { filters: [rawHidFilter] };
 var hid_device;
-var outputReportId = 0x00;
+var outputReportIdHID = 0x00;
 //incoming rawHID
-function handleInputReport(e) {
+function handleInputReportHID(e) {
 	var text = "";
 	var data_in = [];
 	var i;
@@ -1166,12 +1162,6 @@ function str2ab(str) {
   return bufView;
 }
 
-var statusInterval; 
-var reply = false;
-var reply_lines = [];
-var reply_time = 0;
-var d = new Date();
-
 // RawHID
 async function RunSerialHID() {
   console.log('connecting to rawHID device');
@@ -1184,7 +1174,7 @@ async function RunSerialHID() {
     await hid_device.open();
 	
     console.log('Opened device: ' + hid_device.productName);
-    hid_device.addEventListener('inputreport', handleInputReport);        
+    hid_device.addEventListener('inputreport', handleInputReportHID);        
     
   connected_serialHID = true;		
  
@@ -1196,7 +1186,7 @@ async function SerialHIDsend(data){
    console.log('Sending: ' + data);
    let outputReport = str2ab(data); // array will be cleared
    console.log('data[0]=' + outputReport[0] + ' data[1]= ' + outputReport[1] + ' data[2]= ' + outputReport[2] + ' data[3]= ' + outputReport[3]);
-   hid_device.sendReport(outputReportId,outputReport);
+   hid_device.sendReport(outputReportIdHID,outputReport);
    return;
 }
 
