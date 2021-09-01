@@ -3,7 +3,7 @@
 @font-face {
     font-family: StarJedi;
     src: url(Starjedi.ttf);
-    unicode-range: U+0000-003a, U+3c-ff;
+    unicode-range: U+0000-003a, U+3c-5e, U+60-ff;
 }
 
 .header {
@@ -148,7 +148,7 @@
   text-align: center;
   display:inline-block; 
   vertical-align:top; 
-  }
+}
 
 .mybutton {
   font-family: StarJedi, Sans-Serif;
@@ -318,6 +318,7 @@ var buffer = "";
 var track_lines;
 var font_lines;
 var style_lines;
+var dir_lines;
 var named_styles = {};
 var track_string = "";
 var tracks_listed = false;
@@ -1188,6 +1189,12 @@ async function Loop() {
       document.getElementById('tracks').innerHTML = track_string;
       font_lines = await GetList("list_fonts");
       style_lines = await GetList("list_named_styles");
+      dir_lines = await GetList("dir");
+      if (dir_lines.find(dir => dir.split(" ")[0] == "common")) {
+      	 for (var i = 0; i < font_lines.length; i++) {
+	      font_lines[i] += ";common";
+	 }
+      }
       named_styles = { };
       for (var i = 0; i < style_lines.length; i++) {
 	 console.log(style_lines[i]);
