@@ -3,6 +3,7 @@
 @font-face {
     font-family: StarJedi;
     src: url(Starjedi.ttf);
+    unicode-range: U+0000-003a, U+3c-ff;
 }
 
 .header {
@@ -111,7 +112,7 @@
 }
 
 .title {
-  font-family: StarJedi;
+  font-family: StarJedi, Sans-Serif;
   font-size: 250%;
   line-height: 0.8;
 
@@ -123,7 +124,7 @@
 }
 
 .myselect {
-  font-family: StarJedi;
+  font-family: StarJedi, Sans-Serif;
   font-size: 80%;
   background: #101040;
   color: #FFFFFF;
@@ -150,7 +151,7 @@
   }
 
 .mybutton {
-  font-family: StarJedi;
+  font-family: StarJedi, Sans-Serif;
   font-size: 110%;
   line-height: 0.8;
   background: #101040;
@@ -176,14 +177,14 @@
 }
 
 .appname {
-  font-family: StarJedi;
+  font-family: StarJedi, Sans-Serif;
   font-size: 250%;
   line-height: 0.8;
   text-align: center;
 }
 
 .pwbox {
-  font-family: StarJedi;
+  font-family: StarJedi, Sans-Serif;
   font-size: 300%;
 
   margin: 0;
@@ -293,6 +294,7 @@ if ('serviceWorker' in navigator) {
 
 let serviceUuid = '713d0000-389c-f637-b1d7-91b361ae7678';
 
+// BT variables
 var device;
 var server;
 var rx;
