@@ -508,7 +508,6 @@ function style_arg_edits(blade, style) {
     var args = named_styles[style].ARGS;
     for (var i = 0; i < args.length; i++) {
       // console.log(args[i]);
-      ret += "<br>"+args[i][1]+"<br>";
       var value = arg_storage[style + "." + i];
       console.log(value);
       if (!value) {
@@ -516,9 +515,11 @@ function style_arg_edits(blade, style) {
       }
       console.log(value);
       if (args[i][0] == "INT") {
+        ret += "<br>"+args[i][1]+"<br>";
         ret += "<input type=text id=style_field"+blade+"."+i+" class=myinput onchange='SaveStyle("+blade+")' value="+value+">";
       }
       if (args[i][0] == "COLOR") {
+        ret += "<br>"+args[i][1]+"<br>";
         ret += "<input type=color id=style_field"+blade+"."+i+" class=custom onchange='SaveStyle("+blade+")' value="+from16bitcolor(value)+">";
       }
     }
@@ -527,8 +528,10 @@ function style_arg_edits(blade, style) {
 }
 
 function style_field_height(style) {
-  if (named_styles[style])
-    return (named_styles[style].ARGS.length * 2 + 3) * 46;
+  if (named_styles[style]) {
+    var l = named_styles[style].ARGS.filter(arg => arg[0] != "VOID").length;
+    return (l * 2 + 5) * 38;
+  }
   return 300;
 }
 
@@ -536,6 +539,11 @@ function make_style_field(blade, value) {
   arg_storage = {};
   var fields = value.split(' ');
   var style = fields[0];
+  fields = fields.slice(1);
+  if (style == "builtin") {
+    style += " " + fields[0] + " " + fields[1];
+    fields = fields.slice(2);
+  }
   var height = style_field_height(style);
   var ret = "<div class=edit_tall style='height:"+height+"px' id='style_edit"+blade+"'>";
   ret += "<span class=title>style"+blade+"<br>";
@@ -543,8 +551,8 @@ function make_style_field(blade, value) {
   ret += make_select(style_lines, style);
   ret += "</select>";
 
-  for (var i = 1; i < fields.length; i++) {
-    arg_storage[style + "." + (i-1)] = fields[i];
+  for (var i = 0; i < fields.length; i++) {
+    arg_storage[style + "." + i] = fields[i];
   }
   ret += "<span id=style_container"+blade+">";
   ret += style_arg_edits(blade, style);
@@ -1208,6 +1216,9 @@ async function Loop() {
 	   // TYPE, DESC, DEFAULT
 	   arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
 	 }
+	 if (style_lines[i].split(" ")[0] == "builtin") {
+	   arguments = arguments.slice(2);
+	 }
 	 named_styles[style_lines[i]] = {
 	   NAME : style_lines[i],
 	   DESC : args[0],
@@ -1215,7 +1226,8 @@ async function Loop() {
 	 };
       }
 
-      if (named_styles["builtin"]) {
+      if (named_styles["standard"]) {
+      	 console.log("ENABLING EDITING");
          document.getElementById("editbutton").style.visibility='visible';
       }
     }
