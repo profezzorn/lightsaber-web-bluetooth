@@ -507,19 +507,21 @@ function style_arg_edits(blade, style) {
   if (named_styles[style]) {
     var args = named_styles[style].ARGS;
     for (var i = 0; i < args.length; i++) {
-      // console.log(args[i]);
+      console.log(args[i]);
       var value = arg_storage[style + "." + i];
+      var title = "<br>"+args[i][1].replaceAll(" ","&nbsp;")+"<br>";
+      console.log(title);
       console.log(value);
       if (!value) {
         value = args[i][2];
       }
       console.log(value);
       if (args[i][0] == "INT") {
-        ret += "<br>"+args[i][1]+"<br>";
+        ret += title;
         ret += "<input type=text id=style_field"+blade+"."+i+" class=myinput onchange='SaveStyle("+blade+")' value="+value+">";
       }
       if (args[i][0] == "COLOR") {
-        ret += "<br>"+args[i][1]+"<br>";
+        ret += title;
         ret += "<input type=color id=style_field"+blade+"."+i+" class=custom onchange='SaveStyle("+blade+")' value="+from16bitcolor(value)+">";
       }
     }
@@ -530,7 +532,7 @@ function style_arg_edits(blade, style) {
 function style_field_height(style) {
   if (named_styles[style]) {
     var l = named_styles[style].ARGS.filter(arg => arg[0] != "VOID").length;
-    return (l * 2 + 5) * 38;
+    return (l * 2 + 5) * 40;
   }
   return 300;
 }
@@ -1205,16 +1207,31 @@ async function Loop() {
       }
       named_styles = { };
       for (var i = 0; i < style_lines.length; i++) {
-	 console.log(style_lines[i]);
+	 // console.log(style_lines[i]);
          var desc = await GetList("describe_named_style "+style_lines[i]);
-	 console.log(desc);
-	 console.log(desc[0]);
+	 // console.log(desc);
+	 // console.log(desc[0]);
 	 var args = desc[0].split(",");
+	 for (var j = 1; j < args.length; j++) {
+	   args[j] = args[j].trim();
+	 }
 	 var arguments = [];
+	 // if (args.length != desc.length) {
+	 // console.log("WARNING: "+style_lines[i]+" has wrong number of descriptive arguments");
+	 // }
 	 for (var j = 1; j < desc.length; j++) {
            var default_arguments = desc[j].split(" ");
 	   // TYPE, DESC, DEFAULT
 	   arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
+           if (args[j]) {
+	     var last_word = args[j].split(" ").pop();
+	     if (last_word == "color" && default_arguments[0] != "COLOR") {
+               console.log("WARNING: "+style_lines[i]+" argument "+i+" desc says color, but is not color.");
+	     }
+	     if (last_word == "time" && default_arguments[0] != "INT") {
+               console.log("WARNING: "+style_lines[i]+" argument "+i+" desc says time, but is not int.");
+	     }
+	   }
 	 }
 	 if (style_lines[i].split(" ")[0] == "builtin") {
 	   arguments = arguments.slice(2);
