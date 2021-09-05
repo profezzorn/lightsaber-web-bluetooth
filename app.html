@@ -1255,6 +1255,7 @@ async function Loop() {
 }
 
 function Init() {
+  console.log("VERSION: $Id: $");
   var err = true;
   if (localStorage.password) {
     document.getElementById('password').value = localStorage.password;
