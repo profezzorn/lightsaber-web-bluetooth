@@ -24,7 +24,7 @@
   overflow: hidden;
 }
 
-.editbutton {
+.editbutton, .settingsbutton {
   font-size: 250%;
   line-height: 0.8;
   border-radius: 15px; 
@@ -247,6 +247,13 @@ input[type="color"].custom {
   vertical-align: middle;
 }
 
+input[type='checkbox'] {
+    width:50px;
+    height:50px;
+    border-radius:10px;
+    border:4px solid #555;
+}
+
 .slidecontainer {
   width: 100%;
 }
@@ -316,6 +323,7 @@ var status_cb;
 
 var buffer = "";
 var track_lines;
+var max_blade_length = 0;
 var font_lines;
 var style_lines;
 var dir_lines;
@@ -457,6 +465,14 @@ function SendPW(password) {
   });
 }
 
+function FIND(id) {
+  ret = document.getElementById(id);
+  if (!ret) {
+      console.log("Failed to find " + id);
+  }
+  return ret;
+}
+      
 function make_select(list, value) {
   if (!list) list = [];
   var contains_value = false;
@@ -563,12 +579,12 @@ function make_style_field(blade, value) {
 }
 
 function OnStyleSelect(blade) {
-  var style_select = document.getElementById('style_select'+blade);
+  var style_select = FIND('style_select'+blade);
   var style = style_select.value;
-  var style_container = document.getElementById('style_container'+blade);
+  var style_container = FIND('style_container'+blade);
   style_container.innerHTML = style_arg_edits(blade, style);
 
-  var style_edit = document.getElementById('style_edit'+blade);
+  var style_edit = FIND('style_edit'+blade);
   var height = style_field_height(style);
   style_edit.style.height = height + "px";
 
@@ -576,12 +592,12 @@ function OnStyleSelect(blade) {
 }
 
 function SaveStyle(blade) {
-  var style_select = document.getElementById('style_select'+blade);
+  var style_select = FIND('style_select'+blade);
   var style = style_select.value;
   var ret = [style];
   var args = named_styles[style].ARGS;
   for (var i = 0; i < args.length; i++) {
-     var form_field = document.getElementById('style_field'+blade+'.'+i);
+     var form_field = FIND('style_field'+blade+'.'+i);
      var val = form_field.value;
      if (val[0] == '#') {
        val = to16bitcolor(val);
@@ -598,7 +614,7 @@ function SaveStyle(blade) {
 }
 
 function SaveName() {
-  var name_input = document.getElementById('name_input');
+  var name_input = FIND('name_input');
   console.log("SAVE NAME " + name_input.value);
   if (presets[current_preset_num].NAME != name_input.value) {
     presets[current_preset_num].NAME = name_input.value;
@@ -614,13 +630,13 @@ function make_name_field(value) {
 
 
 function SaveVariation() {
-  var variation_slider = document.getElementById('variation_slider');
+  var variation_slider = FIND('variation_slider');
   console.log("SAVE VARIATION " + variation_slider.value);
   if (presets[current_preset_num].VARIATION != variation_slider.value) {
     presets[current_preset_num].VARIATION = variation_slider.value;
     Send("variation " + variation_slider.value);
   }
-  var variation_field = document.getElementById('variation_field');
+  var variation_field = FIND('variation_field');
   if ( variation_field.value != variation_slider.value){
      variation_field.value = variation_slider.value; //update numeric value when altered by slider
   }
@@ -631,17 +647,17 @@ function SaveVariation() {
 
 
 function SetVariation() {
-  var set_variation_field = document.getElementById('variation_field');
+  var set_variation_field = FIND('variation_field');
   console.log("SET VARIATION " + set_variation_field.value);
-  var set_variation_slider = document.getElementById('variation_slider');
+  var set_variation_slider = FIND('variation_slider');
   set_variation_slider.value = set_variation_field.value;
   SaveVariation(); // now do the actual update
 }
 
 function UpdateVariation(value) {
   value = parseInt(value, 10);
-  var set_variation_slider = document.getElementById('variation_slider');
-  var set_variation_field = document.getElementById('variation_field');
+  var set_variation_slider = FIND('variation_slider');
+  var set_variation_field = FIND('variation_field');
   var tmp = parseInt(set_variation_field.value, 10);
   tmp += value;
   tmp &= 32767;  //clamp between min and max slider value, rollover to 0 when too high, rollback to 32767 when negative 
@@ -664,7 +680,7 @@ function make_variation_field(value) {
 }
 
 function SaveFont() {
-  var font_select = document.getElementById('font_select');
+  var font_select = FIND('font_select');
   console.log("SAVE FONT " + font_select.value);
   if (presets[current_preset_num].FONT != font_select.value) {
     presets[current_preset_num].FONT = font_select.value;
@@ -681,7 +697,7 @@ function make_font_field(value) {
 }
 
 function SaveTrack() {
-  var track_select = document.getElementById('track_select');
+  var track_select = FIND('track_select');
   console.log("SAVE TRACK " + track_select.value);
   if (presets[current_preset_num].TRACK != track_select.value) {
     presets[current_preset_num].TRACK = track_select.value;
@@ -706,7 +722,7 @@ function updateEditPane(preset) {
   for (var blade = 1; presets[preset]["STYLE" + blade]; blade++) {
     tmp += make_style_field(blade , presets[preset]["STYLE" + blade]);
   }
-  var edit_pane = document.getElementById('edit_pane2');
+  var edit_pane = FIND('edit_pane2');
   tmp += make_variation_field(presets[preset].VARIATION);
   console.log(edit_pane);  
   edit_pane.innerHTML = tmp;
@@ -729,20 +745,20 @@ function updateCurrentPreset() {
       preset_tags[i].style.background = '#101040';
     }
   }
-  if (editMode)
+  if (currentMode == "edit")
     updateEditPane(current_preset_num);
 }
 
 async function On() {
   await Send('on');
-  document.getElementById('onbutton').style.background = '#505080';
-  document.getElementById('offbutton').style.background = '#101040';
+  FIND('onbutton').style.background = '#505080';
+  FIND('offbutton').style.background = '#101040';
 }
 
 async function Off() {
   await Send('off');
-  document.getElementById('offbutton').style.background = '#505080';
-  document.getElementById('onbutton').style.background = '#101040';
+  FIND('offbutton').style.background = '#505080';
+  FIND('onbutton').style.background = '#101040';
 }
 
 function showCurrentTrack(track) {
@@ -819,8 +835,8 @@ async function PlayTrack(track) {
 }
 
 function SendField() {
-  var value = document.getElementById('textField').value + '\n';
-  document.getElementById('textField').value = "";
+  var value = FIND('textField').value + '\n';
+  FIND('textField').value = "";
   let encoder = new TextEncoder('utf-8');
   tx.writeValue(encoder.encode(value));
 }
@@ -833,7 +849,7 @@ var updating_volume = false;
 var new_volume = -1;
 
 async function UpdateVolume() {
-  var volume_tag = document.getElementById('volume');
+  var volume_tag = FIND('volume');
   var volume = volume_tag.value;
   if (updating_volume) {
     new_volume = volume;
@@ -854,14 +870,14 @@ async function onDisconnected() {
   console.log('Bluetooth Device disconnected');
   Die();
   
-  document.getElementById('reconnecting_message').style.visibility='visible';
+  FIND('reconnecting_message').style.visibility='visible';
 
   while (true) {
     await sleep(5000);
     console.log('Try reconnect');
     try {
       await Connect();
-      document.getElementById('reconnecting_message').style.visibility='hidden';
+      FIND('reconnecting_message').style.visibility='hidden';
       DoRunLoop();
       return;
     } catch (e) {
@@ -942,22 +958,22 @@ async function Connect() {
   }
   catch (e) {
     console.log(e);
-    document.getElementById('EMSG').innerHTML = 'Connection Failed';
+    FIND('EMSG').innerHTML = 'Connection Failed';
     throw e;
   }
 
   if (pw) {
     console.log("Sending PW");
-    var password = document.getElementById('password').value;
+    var password = FIND('password').value;
     var status = await SendPW(password);
     if (status == "OK") {
       console.log("Authenticated.");
       localStorage.password = password;
     } else {
-      document.getElementById('pwspan').style.display='initial';
+      FIND('pwspan').style.display='initial';
       if (password != "") {
         console.log("WRONG PASSWORD!");
-        document.getElementById('EMSG').innerHTML = 'Wrong Password';
+        FIND('EMSG').innerHTML = 'Wrong Password';
       }
       throw 'Wrong Password';
     }
@@ -965,24 +981,41 @@ async function Connect() {
 }
 
 var presets = [];
-var editMode = false;
+var currentMode = 'normal';
 var dragging = null;
 
-function ToggleEditMode() {
-  editMode = !editMode;
-  document.getElementById("editbutton").style.background = editMode ? '#505080' : '#101040';
-  document.getElementById('CTRL').style.display=editMode ? 'none' : 'initial'
-  document.getElementById('TRACKS').style.display=editMode ? 'none' : 'initial'
-  document.getElementById('edit_pane').style.display=editMode ? 'initial' : 'none';
-
-  UpdatePresets();
+function UpdateMode() {
+  FIND('CTRL').style.display=currentMode == 'normal' ? 'initial' : 'none'
+  FIND('TRACKS').style.display=currentMode == 'normal' ? 'initial' : 'none'
+  FIND('PRESETS').style.display=currentMode != 'settings' ? 'initial' : 'none'
+  FIND('edit_pane').style.display=currentMode == 'edit' ? 'initial' : 'none';
+  FIND('settings_pane').style.display=currentMode == 'settings' ? 'initial' : 'none';
+  FIND("editbutton").style.background = currentMode == 'edit' ? '#505080' : '#101040';
+  FIND("settingsbutton").style.background = currentMode == 'settings' ? '#505080' : '#101040';
+  if (currentMode == 'settings') {
+     UpdateSettings();
+  } else {
+     UpdatePresets();
+  }
 }
+
+function ToggleMode(mode) {
+  if (currentMode == mode) {
+    currentMode = "normal";
+  } else {
+    currentMode = mode;
+  }
+  UpdateMode();
+}
+
+function ToggleEditMode() { ToggleMode("edit"); }
+function ToggleSettingsMode() { ToggleMode("settings"); }
 
 function UpdatePresets() {
   preset_string = "";
   for (var i = 0; i < presets.length; i++) {
     var p = presets[i];
-    if (editMode) {
+    if (currentMode == "edit") {
       preset_string += "<div draggable=true class=preset ondragstart='StartDrag("+i+")' onclick='SetPreset(" + i + ")'  ondrop='DropEvent("+i+")'  ondoubleclick='EditPreset("+i+")' ondragover='return false'>";
     } else {
       preset_string += "<div class=preset onclick='SetPreset(" + i + ")'>";
@@ -990,7 +1023,7 @@ function UpdatePresets() {
     preset_string += "<span class=title>" + p.NAME.replace("\\n", "<br>") + "</span>";
     preset_string += "</div>";
   }
-  if (editMode) {
+  if (currentMode == "edit") {
     preset_string += "<div class=preset onclick='AddPreset()'>";
     preset_string += "<span class=title2>+</span>";
     preset_string += "</div>";
@@ -998,10 +1031,79 @@ function UpdatePresets() {
     preset_string += "<span class=title2>&#x1F5D1;</span>";
     preset_string += "</div>";
   }
-  document.getElementById('presets').innerHTML = preset_string;
+  FIND('presets').innerHTML = preset_string;
   updateCurrentPreset(current_preset_num);
 }
 
+async function generateBoolSetting(base_cmd, variable, label) {
+  var value = await Send("get_" + base_cmd + " " + variable);
+  if (value.startsWith("Whut?")) return "";
+  if (value.trim() == "") return "";
+  var checked = parseFloat(value) > 0.5 ? "checked" : "";
+  return "<div class=edit><span class=title>"+label+
+         ": <input type=checkbox class=mycheck id=bool_setting_"+base_cmd+"_"+variable+" "+checked+
+	 " onchange=\"SaveBoolSetting('"+base_cmd+"','"+variable+"')\"></span></div>\n";
+}
+
+function SaveBoolSetting(base_cmd, variable) {
+  var value = FIND("bool_setting_"+base_cmd+"_"+variable).checked ? "1" : "0";
+  Send("set_"+base_cmd+" " + variable + " " + value);
+}
+
+async function UpdateSettings() {
+  FIND("settings_pane2").innerHTML = "...";
+  var html = "";
+  var dimming = await Send("get_blade_dimming");
+  if (!dimming.startsWith("Whut?")) {
+    dimming = Math.round(Math.pow(parseInt(dimming) / 16384.0, 2.2) * 100);
+    html += "<div class=edit id=brightness_setting><span class=title>Brightness<br><br><input type=range min=1 max=100 class=slider style='width:90%' id=brightness_input value='"+dimming+"' onchange='SaveBrightness()'></span></div>\n";
+  }
+  var threshold = await Send("get_clash_threshold");
+  if (!threshold.startsWith("Whut?")) {
+    threshold = threshold.trim();
+    html += "<div class=edit id=clash_threshold_setting><span class=title>Clash Threshold<br><br><input type=range min=0.5 max=6.0 step=0.05 class=slider style='width:90%' id=clash_threshold_input value='"+threshold+"' onchange='SaveClashThreshold()'></span></div>\n";
+  }
+  if (max_blade_length) {
+    var blade = 1;
+    while (true) {
+      var tmp = await Send("get_blade_length " + blade);
+      if (tmp.startsWith("Whut?")) break;
+      var blade_length = parseInt(tmp);
+      if (blade_length == -1) {
+        blade_length = parseInt(await Send("get_max_blade_length " + blade));
+      }
+      if (!blade_length) break;
+      html += "<div class=edit><span class=title>Blade "+blade+" length<br><input type=text class=myinput id=blade_length_input_"+blade+" value='"+blade_length+"' onchange='SaveBladeLength("+blade+")'></span></div>\n";
+      blade ++;
+    }
+  }
+  html += await generateBoolSetting("gesture", "gestureon", "gesture ignion");
+  html += await generateBoolSetting("gesture", "swingon", "swing ignition");
+  html += await generateBoolSetting("gesture", "twiston", "twist ignition");
+  html += await generateBoolSetting("gesture", "thruston", "thrust ignition");
+  html += await generateBoolSetting("gesture", "stabon", "stab ignition");
+  html += await generateBoolSetting("gesture", "twistoff", "twist off");
+  html += await generateBoolSetting("gesture", "powerlock", "power lock");
+  html += await generateBoolSetting("gesture", "forcepush", "force push");
+
+  FIND("settings_pane2").innerHTML = html;
+}
+
+function SaveBladeLength(blade) {
+  var length = FIND("blade_length_input_"+blade).value;
+  Send("set_blade_length " + blade + " " + length);
+}
+
+function SaveBrightness() {
+  var dim = FIND("brightness_input").value;
+  dim = Math.round(Math.pow(dim/100.0, 1.0/2.2) * 16384);
+  Send("set_blade_dimming "+ dim);
+}
+
+function SaveClashThreshold() {
+  var threshold = FIND("clash_threshold_input").value;
+  Send("set_clash_threshold "+ threshold);
+}
 
 var UARTs = {
   '713d0000-389c-f637-b1d7-91b361ae7678' : { rx:'713d0002-389c-f637-b1d7-91b361ae7678', tx:'713d0003-389c-f637-b1d7-91b361ae7678',   // my own special blend
@@ -1017,7 +1119,7 @@ var UARTs = {
 
 
 async function Run() {
-  document.getElementById('EMSG').innerHTML = '';
+  FIND('EMSG').innerHTML = '';
   if (!device) {
     var filters=[];
     for (var uuid in UARTs) {
@@ -1038,10 +1140,10 @@ async function Run() {
 }
 
 async function Run2() {
-  document.getElementById('while_connected').style.visibility='visible';  
-  document.getElementById('while_disconnected').style.visibility='hidden';  
-  document.getElementById('connect_usb').style.visibility='hidden';
-  document.getElementById('connect_ble').style.visibility='hidden';
+  FIND('while_connected').style.visibility='visible';  
+  FIND('while_disconnected').style.visibility='hidden';  
+  FIND('connect_usb').style.visibility='hidden';
+  FIND('connect_ble').style.visibility='hidden';
 
   var preset;
   var preset_string;
@@ -1070,7 +1172,7 @@ async function Run2() {
 }
 
 async function RunUSB() {
-  document.getElementById('EMSG').innerHTML = '';
+  FIND('EMSG').innerHTML = '';
   var filters = [
      { 'vendorId': 0x1209, 'productId': 0x6668 },
   ];
@@ -1105,7 +1207,7 @@ async function RunUSB() {
   console.log("OUT EP", endpointOut, "IN EP", endpointIn);
   if (endpointOut == -1 || endpointIn == -1) {
     usb_device = undefined;
-    document.getElementById('EMSG').innerHTML = "No Webusb interface found"
+    FIND('EMSG').innerHTML = "No Webusb interface found"
     return;
   }
 
@@ -1152,6 +1254,11 @@ async function GetList(cmd) {
   return ret;
 }
 
+async function HasCmd(cmd) {
+  var s = await Send(cmd);
+  return !s.startsWith("Whut?");
+}
+
 async function Loop() {
   while (true) {
     const preset = await Send("get_preset");
@@ -1162,18 +1269,18 @@ async function Loop() {
     showCurrentTrack(current_track);
 
     const volume = await Send("get_volume");
-    document.getElementById('volume').value = parseInt(volume);
+    FIND('volume').value = parseInt(volume);
 
     const voltage = await Send("battery_voltage");
-    document.getElementById('voltage').innerHTML = voltage;
+    FIND('voltage').innerHTML = voltage;
 
     const on = await Send("get_on");
     if (parseInt(on)) {
-      document.getElementById('onbutton').style.background = '#505080';
-      document.getElementById('offbutton').style.background = '#101040';
+      FIND('onbutton').style.background = '#505080';
+      FIND('offbutton').style.background = '#101040';
     } else {
-      document.getElementById('offbutton').style.background = '#505080';
-      document.getElementById('onbutton').style.background = '#101040';
+      FIND('offbutton').style.background = '#505080';
+      FIND('onbutton').style.background = '#101040';
     }
 
     // It will give a short click, but only the first time, after track_list has been populated
@@ -1196,7 +1303,7 @@ async function Loop() {
           track_string += "</div>";
         }
       }
-      document.getElementById('tracks').innerHTML = track_string;
+      FIND('tracks').innerHTML = track_string;
       font_lines = await GetList("list_fonts");
       style_lines = await GetList("list_named_styles");
       dir_lines = await GetList("dir");
@@ -1225,11 +1332,11 @@ async function Loop() {
 	   arguments.push([ default_arguments[0], args[j], default_arguments[1] ]);
            if (args[j]) {
 	     var last_word = args[j].split(" ").pop();
-	     if (last_word == "color" && default_arguments[0] != "COLOR") {
-               console.log("WARNING: "+style_lines[i]+" argument "+i+" desc says color, but is not color.");
+	     if (last_word == "color" && default_arguments[0] == "INT") {
+               console.log("WARNING: "+style_lines[i]+" argument "+i+" desc says color, but is int.");
 	     }
-	     if (last_word == "time" && default_arguments[0] != "INT") {
-               console.log("WARNING: "+style_lines[i]+" argument "+i+" desc says time, but is not int.");
+	     if (last_word == "time" && default_arguments[0] == "COLOR") {
+               console.log("WARNING: "+style_lines[i]+" argument "+i+" desc says time, but is color.");
 	     }
 	   }
 	 }
@@ -1245,7 +1352,19 @@ async function Loop() {
 
       if (named_styles["standard"]) {
       	 console.log("ENABLING EDITING");
-         document.getElementById("editbutton").style.visibility='visible';
+         FIND("editbutton").style.visibility='visible';
+      }
+
+      max_blade_answer = await Send("get_max_blade_length 1");
+      max_blade_length = parseInt(max_blade_answer);
+
+      var hasDimming = await HasCmd("get_blade_dimming");
+      var hasThreshold = await HasCmd("get_clash_threshold");
+      var hasGetGesture = await HasCmd("get_gesture");
+
+      if (max_blade_length || hasDimming || hasThreshold | hasGetGesture) {
+         console.log("ENABLING SETTINGS");
+	 FIND("settingsbutton").style.visibility='visible';
       }
     }
 
@@ -1255,21 +1374,21 @@ async function Loop() {
 }
 
 function Init() {
-  console.log("VERSION: $Id: $");
+  console.log("VERSION: $Id$");
   var err = true;
   if (localStorage.password) {
-    document.getElementById('password').value = localStorage.password;
+    FIND('password').value = localStorage.password;
   }
   if (navigator.usb) {
-    document.getElementById('connect_usb').style.visibility='visible';
+    FIND('connect_usb').style.visibility='visible';
     err = false;
   }
   if (navigator.bluetooth) {
-    document.getElementById('connect_ble').style.visibility='visible';
+    FIND('connect_ble').style.visibility='visible';
     err = false;
   }
   if (err) {
-    document.getElementById('EMSG').innerHTML = "This browser supports neither webusb nor web bluetooth.";
+    FIND('EMSG').innerHTML = "This browser supports neither webusb nor web bluetooth.";
   }
 }
 
@@ -1295,12 +1414,13 @@ function Init() {
 <div id=while_connected class=container style='visibility:hidden;'>
 
 <div class="top" id=top_message>
+  <div class=settingsbutton  style='visibility:hidden;' id=settingsbutton onclick='ToggleSettingsMode()'>&#x2699;</div>
   <div class=editbutton  style='visibility:hidden;' id=editbutton onclick='ToggleEditMode()'>&#x270E;</div>
   <div class=appname>Proffieos Workbench</div><br/>
       <div class="slidecontainer">
       Volume: <input id=volume type=range min=0 max=2000 class="slider" style="width:50%" oninput='UpdateVolume();' onchange='UpdateVolume();'>
       </div>
-  Battery: <span id=voltage>---</span> volts.
+      Battery: <span id=voltage>---</span> volts.
   <span id=reconnecting_message style='visibility:hidden;'>
     Reconnecting...
   </span>
@@ -1326,6 +1446,13 @@ function Init() {
     <div class=header><span class=title>Edit</span><br></div>
     <span id=edit_pane2  class=centered>
       Getting options...
+    </span>
+  </div>
+
+  <div id=settings_pane class=edit_scrollable  style='display:none;'>
+    <div class=header><span class=title>Settings</span><br></div>
+    <span id=settings_pane2  class=centered>
+      Getting options....
     </span>
   </div>
 
