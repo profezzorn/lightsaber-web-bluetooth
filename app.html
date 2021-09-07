@@ -1050,6 +1050,21 @@ function SaveBoolSetting(base_cmd, variable) {
   Send("set_"+base_cmd+" " + variable + " " + value);
 }
 
+async function generateIntSetting(base_cmd, variable, label) {
+  var value = await Send("get_" + base_cmd + " " + variable);
+  if (value.startsWith("Whut?")) return "";
+  if (value.trim() == "") return "";
+  value = Math.round(parseFloat(value));
+  return "<div class=edit><span class=title>"+label+
+         "<br><input type=text class=myinput id=int_setting_"+base_cmd+"_"+variable+" value='"+value+"'"+
+	 " onchange=\"SaveIntSetting('"+base_cmd+"','"+variable+"')\"></span></div>\n";
+}
+
+function SaveIntSetting(base_cmd, variable) {
+  var value = FIND("int_setting_"+base_cmd+"_"+variable).value;
+  Send("set_"+base_cmd+" " + variable + " " + value);
+}
+
 async function UpdateSettings() {
   FIND("settings_pane2").innerHTML = "...";
   var html = "";
@@ -1079,12 +1094,17 @@ async function UpdateSettings() {
   }
   html += await generateBoolSetting("gesture", "gestureon", "gesture ignion");
   html += await generateBoolSetting("gesture", "swingon", "swing ignition");
+  html += await generateIntSetting("gesture",  "swingonspeed", "swing on speed");
   html += await generateBoolSetting("gesture", "twiston", "twist ignition");
   html += await generateBoolSetting("gesture", "thruston", "thrust ignition");
   html += await generateBoolSetting("gesture", "stabon", "stab ignition");
   html += await generateBoolSetting("gesture", "twistoff", "twist off");
   html += await generateBoolSetting("gesture", "powerlock", "power lock");
   html += await generateBoolSetting("gesture", "forcepush", "force push");
+  html += await generateIntSetting("gesture",  "forcepushlen", "force push length");
+  html += await generateIntSetting("gesture",  "lockupdelay", "lockup delay");
+  html += await generateIntSetting("gesture",  "clashdetect", "clash detect");
+  html += await generateIntSetting("gesture",  "maxclash", "max clash strength");
 
   FIND("settings_pane2").innerHTML = html;
 }
