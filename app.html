@@ -548,7 +548,7 @@ function style_arg_edits(blade, style) {
 function style_field_height(style) {
   if (named_styles[style]) {
     var l = named_styles[style].ARGS.filter(arg => arg[0] != "VOID").length;
-    return (l * 2 + 5) * 40;
+    return (l * 2 + 5) * 42;
   }
   return 300;
 }
