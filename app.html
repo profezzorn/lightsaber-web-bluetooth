@@ -598,9 +598,14 @@ function SaveStyle(blade) {
   var args = named_styles[style].ARGS;
   for (var i = 0; i < args.length; i++) {
      var form_field = FIND('style_field'+blade+'.'+i);
-     var val = form_field.value;
-     if (val[0] == '#') {
-       val = to16bitcolor(val);
+     var val;
+     if (form_field) {
+       val = form_field.value;
+       if (val[0] == '#') {
+         val = to16bitcolor(val);
+       }
+     } else {
+       val = "~";
      }
      arg_storage[style + "." + i] = val;
      ret.push(val);
@@ -1092,7 +1097,7 @@ async function UpdateSettings() {
       blade ++;
     }
   }
-  html += await generateBoolSetting("gesture", "gestureon", "gesture ignion");
+  html += await generateBoolSetting("gesture", "gestureon", "gesture ignition");
   html += await generateBoolSetting("gesture", "swingon", "swing ignition");
   html += await generateIntSetting("gesture",  "swingonspeed", "swing on speed");
   html += await generateBoolSetting("gesture", "twiston", "twist ignition");
