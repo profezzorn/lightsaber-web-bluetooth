@@ -63,6 +63,25 @@
   display: inline-block;
 }
 
+.big_control {
+  border-radius: 15px 50px;
+  border: 2px solid #6060aa;
+  background: #101040;
+  color: #FFFFFF;
+  width: 500px;
+  height: 200px;
+  text-align: center;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 8px;
+  position: relative;
+  text-overflow:clip;
+  overflow: hidden;
+  display: inline-block;
+}
+
 .edit, .edit-select {
   border-radius: 15px 50px;
   border: 2px solid #6060aa;
@@ -122,6 +141,17 @@
   left: 50%;
   transform: translate(-50%, -50%);
 }
+.bigtitle {
+  font-family: StarJedi, Sans-Serif;
+  font-size: 350%;
+  line-height: 0.8;
+
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
 
 .myselect {
   font-family: StarJedi, Sans-Serif;
@@ -158,6 +188,36 @@
   color: #FFFFFF;
   border: 0px;
   text-align: center;
+}
+
+.mybutton2 {
+  font-family: StarJedi, Sans-Serif;
+  font-size: 110%;
+  line-height: 0.8;
+  background: #101040;
+  color: #FFFFFF;
+  border: 0px;
+  text-align: center;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mybutton_large {
+  font-family: StarJedi, Sans-Serif;
+  font-size: 2500%;
+  line-height: 0.8;
+  background: #101040;
+  color: #FFFFFF;
+  border: 0px;
+  text-align: center;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .value {
@@ -871,7 +931,7 @@ async function UpdateVolume() {
   updating_volume = false;
 }
 
-async function onDisconnected() {
+async function onDisconnectedBLE() {
   console.log('Bluetooth Device disconnected');
   Die();
   
@@ -889,6 +949,12 @@ async function onDisconnected() {
       console.log(e);
     }
   }
+}
+
+async function onDisconnectedUSB() {
+  console.log("USB DISCONNECTED");
+  Die();
+  FIND('disconnected').style.visibility='visible';  
 }
 
 function dumpChar(c) {
@@ -959,7 +1025,7 @@ async function Connect() {
       status.addEventListener('characteristicvaluechanged', OnStatus);
     }
 
-    device.addEventListener('gattserverdisconnected', onDisconnected);
+    device.addEventListener('gattserverdisconnected', onDisconnectedBLE);
   }
   catch (e) {
     console.log(e);
@@ -1235,6 +1301,7 @@ async function RunUSB() {
     FIND('EMSG').innerHTML = "No Webusb interface found"
     return;
   }
+  navigator.usb.ondisconnect = onDisconnectedUSB;
 
   await usb_device.claimInterface(interfaceNumber);
   await usb_device.selectAlternateInterface(interfaceNumber, 0);
@@ -1253,7 +1320,6 @@ async function RunUSB() {
     OnData(data.data);
   }
 }    
-
 
 var loop_running = false;
 async function DoRunLoop() {
@@ -1420,21 +1486,18 @@ function Init() {
 </script>
 <span class=pwbox id=while_disconnected>
   <div id=connect_usb style='visibility:hidden;' class=control>
-     <button class=mybutton type=button onclick='RunUSB()'>usb</button><br>
+     <button class=mybutton2 type=button onclick='RunUSB()'>usb</button>
   </div>
   <div id=connect_ble style='visibility:hidden;'>
     <span id=pwspan style='display:none'>Password:&nbsp;<input class=pwinput type=password id=password onkeydown="if (event.keyCode == 13) Run();"></span>
     <div class=control>
-      <button class=mybutton type=button onclick='Run()'>BLE</button>
+      <button class=mybutton2 type=button onclick='Run()'>BLE</button>
     </div>
     <br>
   </div>
   <div id=EMSG></div>
 </span>
-<br>
-
 <!-- Send Command: <input type=text id=textField onkeydown="if (event.keyCode == 13) SendField();"><br> -->
-
 
 <div id=while_connected class=container style='visibility:hidden;'>
 
@@ -1534,6 +1597,12 @@ function Init() {
 </div>
 
 
+</span>
+
+<span class=pwbox id=disconnected style='visibility:hidden'>
+    <div id=reconnectbutton class=big_control>
+       <button class=mybutton2 type=button onclick='location.reload()'>reconnect</button>
+    </div>
 </span>
 
 </body>
