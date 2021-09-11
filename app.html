@@ -1441,7 +1441,7 @@ async function Loop() {
 	 };
       }
 
-      if (named_styles["standard"]) {
+      if (Object.keys(named_styles).length > 0) {
       	 console.log("ENABLING EDITING");
          FIND("editbutton").style.visibility='visible';
       }
