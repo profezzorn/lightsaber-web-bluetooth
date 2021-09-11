@@ -582,9 +582,11 @@ function style_arg_edits(blade, style) {
   var ret = ""
   if (named_styles[style]) {
     var args = named_styles[style].ARGS;
+    var template_id = named_styles[style].TEMPLATE;
+
     for (var i = 0; i < args.length; i++) {
       console.log(args[i]);
-      var value = arg_storage[style + "." + i];
+      var value = arg_storage[template_id + "." + i];
       var title = "<br>"+args[i][1].replaceAll(" ","&nbsp;")+"<br>";
       console.log(title);
       console.log(value);
@@ -629,8 +631,9 @@ function make_style_field(blade, value) {
   ret += make_select(style_lines, style);
   ret += "</select>";
 
+  var template_id = named_styles[style].TEMPLATE;
   for (var i = 0; i < fields.length; i++) {
-    arg_storage[style + "." + i] = fields[i];
+    arg_storage[template_id + "." + i] = fields[i];
   }
   ret += "<span id=style_container"+blade+">";
   ret += style_arg_edits(blade, style);
@@ -656,6 +659,7 @@ function SaveStyle(blade) {
   var style = style_select.value;
   var ret = [style];
   var args = named_styles[style].ARGS;
+  var template_id = named_styles[style].TEMPLATE;
   for (var i = 0; i < args.length; i++) {
      var form_field = FIND('style_field'+blade+'.'+i);
      var val;
@@ -667,7 +671,7 @@ function SaveStyle(blade) {
      } else {
        val = "~";
      }
-     arg_storage[style + "." + i] = val;
+     arg_storage[template_id + "." + i] = val;
      ret.push(val);
   }
   console.log("***SAVE STYLE***");
@@ -1396,20 +1400,19 @@ async function Loop() {
       }
       FIND('tracks').innerHTML = track_string;
       font_lines = await GetList("list_fonts");
-      style_lines = await GetList("list_named_styles");
-      dir_lines = await GetList("dir");
-      if (dir_lines.find(dir => dir.split(" ")[0] == "common")) {
-      	 for (var i = 0; i < font_lines.length; i++) {
-	      font_lines[i] += ";common";
-	 }
+      for (var i = 0; i < font_lines.length; i++) {
+        font_lines[i] += ";common";
       }
+      style_lines = await GetList("list_named_styles");
       named_styles = { };
+      template_ids = [];
       for (var i = 0; i < style_lines.length; i++) {
 	 // console.log(style_lines[i]);
          var desc = await GetList("describe_named_style "+style_lines[i]);
 	 // console.log(desc);
 	 // console.log(desc[0]);
-	 var args = desc[0].split(",");
+	 var arg_string = desc[0];
+	 var args = arg_string.split(",");
 	 for (var j = 1; j < args.length; j++) {
 	   args[j] = args[j].trim();
 	 }
@@ -1434,10 +1437,48 @@ async function Loop() {
 	 if (style_lines[i].split(" ")[0] == "builtin") {
 	   arguments = arguments.slice(2);
 	 }
+
+         // Group compatible templates for argument saving.
+	 var best_matches = -1;
+	 var styles_so_far = Object.keys(named_styles);
+	 var template_id = styles_so_far.length;
+	 for (var j = 0; j < template_ids.length; j++) {
+	    var tid = template_ids[j];
+	    var compatible = true;
+	    var matches = 0;
+            for (var l = 0; l < styles_so_far.length && compatible; l++) {
+	      var tmp = named_styles[styles_so_far[l]];
+	      if (tmp.TEMPLATE != tid) continue;
+              if (arg_string != tmp.ARG_STRING) {
+	        compatible = false;
+		break;
+              }
+	      var matching_args = 0;
+              for (var k = 0; k < Math.min(arguments.length, tmp.ARGS.length); k++) {
+	        if (arguments[k][0] == "VOID") continue;
+                if (tmp.ARGS[k][0] == "VOID") continue;
+                if (arguments[k][0] == tmp.ARGS[k][0]) {
+                  matching_args = 0;
+                } else {
+	          compatible = false;
+	          break;
+	        }
+              }
+	      matches = Math.max(matches, matching_args);
+	    }
+	    if (compatible && matches > best_matches) {
+	      best_matches = matches;
+	      template_id = tid;
+	    }
+	 }
+         template_ids.push(template_id);
+
 	 named_styles[style_lines[i]] = {
 	   NAME : style_lines[i],
 	   DESC : args[0],
-	   ARGS : arguments
+	   ARG_STRING : arg_string,
+	   ARGS : arguments,
+	   TEMPLATE: template_id
 	 };
       }
 
@@ -1466,6 +1507,7 @@ async function Loop() {
 
 function Init() {
   console.log("VERSION: $Id$");
+  console.log(document.lastModified);
   var err = true;
   if (localStorage.password) {
     FIND('password').value = localStorage.password;
