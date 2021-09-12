@@ -1271,8 +1271,15 @@ async function RunUSB() {
   var filters = [
      { 'vendorId': 0x1209, 'productId': 0x6668 },
   ];
-  usb_device = await navigator.usb.requestDevice({'filters': filters});
+
+  var usb_devices = await navigator.usb.getDevices();
+  if (usb_devices.length == 1) {
+    usb_device = usb_devices[0];
+  } else {
+    usb_device = await navigator.usb.requestDevice({'filters': filters});
+  }
   await usb_device.open();
+  
   if (usb_device.configuration === null) {
     await usb_device.selectConfiguration(1);
   }
