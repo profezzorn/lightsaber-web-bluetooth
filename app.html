@@ -3,7 +3,7 @@
 @font-face {
     font-family: StarJedi;
     src: url(Starjedi.ttf);
-    unicode-range: U+0000-003a, U+3c-5e, U+60-ff;
+    unicode-range: U+0000-0024, U+26-003a, U+3c-5e, U+60-ff;
 }
 
 .header {
@@ -532,8 +532,9 @@ function FIND(id) {
   }
   return ret;
 }
-      
-function make_select(list, value) {
+
+function make_select(list, value, fn) {
+  if (!fn) fn = str => str.toLowerCase();
   if (!list) list = [];
   var contains_value = false;
   for (var i = 0; i < list.length; i++) {
@@ -547,7 +548,7 @@ function make_select(list, value) {
   for (var i = 0; i < list.length; i++) {
     ret += "<option value='"+list[i]+"' ";
     if (value == list[i]) ret += " selected";
-    ret +=">"+list[i].toLowerCase()+"</option>";
+    ret +=">"+fn(list[i])+"</option>";
   }
   return ret;
 }
@@ -914,25 +915,26 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var updating_volume = false;
-var new_volume = -1;
+updating_sliders = {}
+
+async function UpdateSlider(cmd, slider, label, fn) {
+  var slider_tag = FIND(slider);
+  var label_tag = FIND(label);
+  var value = slider_tag.value;
+  label_tag.innerHTML = value;
+  if (updating_sliders[slider]) return;
+  updating_sliders[slider] = true;
+  while (true) {
+    await Send(cmd + " " + (fn ? fn(value) : value));
+    var old = value;
+    value = label_tag.innerHTML;
+    if (old == value) break;
+  }
+  updating_sliders[slider] = false;
+}
 
 async function UpdateVolume() {
-  var volume_tag = FIND('volume');
-  var volume = volume_tag.value;
-  if (updating_volume) {
-    new_volume = volume;
-    return;
-  }
-  updating_volume = true;
-  while (true) {
-    await Send("set_volume " + volume);
-    volume_tag.value = volume;
-    if (new_volume != -1) break;
-    volume = new_volume;
-    new_volume = -1;
-  }
-  updating_volume = false;
+  UpdateSlider("set_volume", "volume", "volume_label");
 }
 
 async function onDisconnectedBLE() {
@@ -1145,13 +1147,13 @@ async function UpdateSettings() {
   var html = "";
   var dimming = await Send("get_blade_dimming");
   if (!dimming.startsWith("Whut?")) {
-    dimming = Math.round(Math.pow(parseInt(dimming) / 16384.0, 2.2) * 100);
-    html += "<div class=edit id=brightness_setting><span class=title>Brightness<br><br><input type=range min=1 max=100 class=slider style='width:90%' id=brightness_input value='"+dimming+"' onchange='SaveBrightness()'></span></div>\n";
+    var dim_percent = Math.round(Math.pow(parseInt(dimming) / 16384.0, 1.0/2.2) * 100);
+    html += "<div class=edit id=brightness_setting><span class=title>Brightness<br><br><input type=range min=1 max=100 class=slider style='width:90%' id=brightness_input value='"+dim_percent+"' onchange='SaveBrightness()' oninput='SaveBrightness()'><br><br><span id=brightness_number>"+dim_percent+"%</span></span></div>\n";
   }
   var threshold = await Send("get_clash_threshold");
   if (!threshold.startsWith("Whut?")) {
     threshold = threshold.trim();
-    html += "<div class=edit id=clash_threshold_setting><span class=title>Clash Threshold<br><br><input type=range min=0.5 max=6.0 step=0.05 class=slider style='width:90%' id=clash_threshold_input value='"+threshold+"' onchange='SaveClashThreshold()'></span></div>\n";
+    html += "<div class=edit id=clash_threshold_setting><span class=title>Clash&nbsp;Threshold<br><br><input type=range min=0.5 max=6.0 step=0.05 class=slider style='width:90%' id=clash_threshold_input value='"+threshold+"' onchange='SaveClashThreshold()' oninput='SaveClashThreshold()'><br><br><span id=clash_threshold_number>"+threshold+"</span></span></div>\n";
   }
   if (max_blade_length) {
     var blade = 1;
@@ -1190,14 +1192,15 @@ function SaveBladeLength(blade) {
 }
 
 function SaveBrightness() {
-  var dim = FIND("brightness_input").value;
-  dim = Math.round(Math.pow(dim/100.0, 1.0/2.2) * 16384);
-  Send("set_blade_dimming "+ dim);
+  UpdateSlider("set_blade_dimming", "brightness_input", "brightness_number",
+                dim_percent => Math.round(Math.pow(dim_percent/100.0, 2.2) * 16384));
 }
 
 function SaveClashThreshold() {
   var threshold = FIND("clash_threshold_input").value;
   Send("set_clash_threshold "+ threshold);
+  var threshold_label = FIND("clash_threshold_number")
+  threshold_label.innerHTML = threshold;
 }
 
 var UARTs = {
@@ -1372,6 +1375,7 @@ async function Loop() {
 
     const volume = await Send("get_volume");
     FIND('volume').value = parseInt(volume);
+    FIND('volume_label').innerHTML = volume;
 
     const voltage = await Send("battery_voltage");
     FIND('voltage').innerHTML = voltage;
@@ -1499,7 +1503,7 @@ async function Loop() {
 
       var hasDimming = await HasCmd("get_blade_dimming");
       var hasThreshold = await HasCmd("get_clash_threshold");
-      var hasGetGesture = await HasCmd("get_gesture");
+      var hasGetGesture = await HasCmd("get_gesture test");
 
       if (max_blade_length || hasDimming || hasThreshold | hasGetGesture) {
          console.log("ENABLING SETTINGS");
@@ -1555,7 +1559,7 @@ function Init() {
   <div class=editbutton  style='visibility:hidden;' id=editbutton onclick='ToggleEditMode()'>&#x270E;</div>
   <div class=appname>Proffieos Workbench</div><br/>
       <div class="slidecontainer">
-      Volume: <input id=volume type=range min=0 max=2000 class="slider" style="width:50%" oninput='UpdateVolume();' onchange='UpdateVolume();'>
+      Volume: <input id=volume type=range min=0 max=2000 class="slider" style="width:50%" oninput='UpdateVolume();' onchange='UpdateVolume();'><span id=volume_label>VOL</span>
       </div>
       Battery: <span id=voltage>---</span> volts.
   <span id=reconnecting_message style='visibility:hidden;'>
