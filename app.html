@@ -1161,11 +1161,12 @@ async function UpdateSettings() {
       var tmp = await Send("get_blade_length " + blade);
       if (tmp.startsWith("Whut?")) break;
       var blade_length = parseInt(tmp);
+      max_blade_length = parseInt(await Send("get_max_blade_length " + blade));
       if (blade_length == -1) {
-        blade_length = parseInt(await Send("get_max_blade_length " + blade));
+      	 blade_length = max_blade_length;
       }
       if (!blade_length) break;
-      html += "<div class=edit><span class=title>Blade "+blade+" length<br><input type=text class=myinput id=blade_length_input_"+blade+" value='"+blade_length+"' onchange='SaveBladeLength("+blade+")'></span></div>\n";
+      html += "<div class=edit><span class=title>Blade "+blade+" length<br><input type=text class=myinput id=blade_length_input_"+blade+" value='"+blade_length+"' onchange='SaveBladeLength("+blade+","+max_blade_length+")'></span></div>\n";
       blade ++;
     }
   }
@@ -1186,8 +1187,13 @@ async function UpdateSettings() {
   FIND("settings_pane2").innerHTML = html;
 }
 
-function SaveBladeLength(blade) {
-  var length = FIND("blade_length_input_"+blade).value;
+function SaveBladeLength(blade, max_length) {
+  var tag = FIND("blade_length_input_"+blade);
+  var length = tag.value;
+  if (length > max_length) {
+    length = max_length;
+  }
+  tag.value = length;
   Send("set_blade_length " + blade + " " + length);
 }
 
