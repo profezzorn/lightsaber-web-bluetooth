@@ -622,8 +622,11 @@ function make_style_field(blade, value) {
   var style = fields[0];
   fields = fields.slice(1);
   if (style == "builtin") {
-    style += " " + fields[0] + " " + fields[1];
-    fields = fields.slice(2);
+    var style_and_args = style + " " + fields[0] + " " + fields[1];
+    if (named_styles[style_and_args]) {
+      style = style_and_args;
+      fields = fields.slice(2);
+    }
   }
   var height = style_field_height(style);
   var ret = "<div class=edit_tall style='height:"+height+"px' id='style_edit"+blade+"'>";
@@ -632,6 +635,7 @@ function make_style_field(blade, value) {
   ret += make_select(style_lines, style);
   ret += "</select>";
 
+//  console.log("FLORB: "+style);
   var template_id = named_styles[style].TEMPLATE;
   for (var i = 0; i < fields.length; i++) {
     arg_storage[template_id + "." + i] = fields[i];
