@@ -557,7 +557,7 @@ var arg_storage = {};
 
 function from16bitlinear(val) {
   val = parseInt(val);
-  val = Math.round(Math.pow(val / 65535.0, 2.2) * 255.0);
+  val = Math.round(Math.pow(val / 65535.0, 1.0/2.2) * 255.0);
   return Number(1024 + val).toString(16).slice(-2);
 }
 
@@ -569,7 +569,7 @@ function from16bitcolor(val) {
 
 function to16bitlinear(val) {
   val = parseInt(val, 16);
-  val = Math.round(Math.pow(val / 255.0, 1.0 / 2.2) * 65535);
+  val = Math.round(Math.pow(val / 255.0, 2.2) * 65535);
   return val;
 }
 
@@ -1374,6 +1374,14 @@ async function HasCmd(cmd) {
   return !s.startsWith("Whut?");
 }
 
+async function HasDir(dir) {
+  var entries = await GetList("dir "+dir);
+  if (entries.length == 1 && entries[0] == "No such directory.") {
+    return false;
+  }
+  return true
+}
+
 async function Loop() {
   while (true) {
     const preset = await Send("get_preset");
@@ -1420,9 +1428,12 @@ async function Loop() {
         }
       }
       FIND('tracks').innerHTML = track_string;
+      var has_common = await HasDir("common");
       font_lines = await GetList("list_fonts");
-      for (var i = 0; i < font_lines.length; i++) {
-        font_lines[i] += ";common";
+      if (has_common) {
+        for (var i = 0; i < font_lines.length; i++) {
+          font_lines[i] += ";common";
+        }
       }
       style_lines = await GetList("list_named_styles");
       named_styles = { };
