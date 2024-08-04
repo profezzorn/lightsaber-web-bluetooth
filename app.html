@@ -1132,6 +1132,22 @@ function SaveBoolSetting(base_cmd, variable) {
   Send("set_"+base_cmd+" " + variable + " " + value);
 }
 
+// Single cmd queries and sets value.
+async function generateSimpleBoolSetting(cmd, label) {
+  var value = await Send(cmd);
+  if (value.startsWith("Whut?")) return "";
+  if (value.trim() == "") return "";
+  var checked = parseFloat(value) > 0.5 ? "checked" : "";
+  return "<div class=edit><span class=title>"+label+
+         ": <input type=checkbox class=mycheck id=bool_setting_"+cmd+" "+checked+
+	 " onchange=\"SaveSimpleBoolSetting('"+cmd+"')\"></span></div>\n";
+}
+
+function SaveSimpleBoolSetting(cmd) {
+  var value = FIND("bool_setting_"+cmd).checked ? "1" : "0";
+  Send(cmd + " " + value);
+}
+
 async function generateIntSetting(base_cmd, variable, label) {
   var value = await Send("get_" + base_cmd + " " + variable);
   if (value.startsWith("Whut?")) return "";
@@ -1150,6 +1166,7 @@ function SaveIntSetting(base_cmd, variable) {
 async function UpdateSettings() {
   FIND("settings_pane2").innerHTML = "...";
   var html = "";
+  html += await generateSimpleBoolSetting("sd", "sd card access");
   var dimming = await Send("get_blade_dimming");
   if (!dimming.startsWith("Whut?")) {
     var dim_percent = Math.round(Math.pow(parseInt(dimming) / 16384.0, 1.0/2.2) * 100);
@@ -1537,8 +1554,9 @@ async function Loop() {
       var hasDimming = await HasCmd("get_blade_dimming");
       var hasThreshold = await HasCmd("get_clash_threshold");
       var hasGetGesture = await HasCmd("get_gesture test");
+      var hasSD = await HasCmd("sd");
 
-      if (max_blade_length || hasDimming || hasThreshold | hasGetGesture) {
+      if (max_blade_length || hasDimming || hasThreshold | hasGetGesture | hasSD) {
          console.log("ENABLING SETTINGS");
 	 FIND("settingsbutton").style.visibility='visible';
       }
