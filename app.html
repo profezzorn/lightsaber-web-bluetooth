@@ -1248,18 +1248,29 @@ async function Run() {
   Run2();
 }
 
+async function SYNC() {
+  var x = 42;
+  while (true) {
+    var cmd = "fnord" +x;
+    var str = await Send("fnord" + x);
+    if (str.startsWith("Whut? :"+cmd)) break;
+    x++;
+  }
+}
+
 async function Run2() {
+  console.log("RUN2");	  
   FIND('while_connected').style.visibility='visible';  
   FIND('while_disconnected').style.visibility='hidden';  
   FIND('connect_usb').style.visibility='hidden';
   FIND('connect_ble').style.visibility='hidden';
 
+  await SYNC();
+
   var preset;
   var preset_string;
-  while (true) {
-    preset_string = await Send("list_presets");
-    if (preset_string.split("=").length > 3) break;
-  }
+  preset_string = await Send("list_presets");
+  // if (preset_string.split("=").length > 3) break;
   const lines = preset_string.split("\n");
   for (var l = 0; l < lines.length; l++) {
     var tmp = lines[l].split("=");
