@@ -1092,12 +1092,16 @@ async function Connect() {
 
     console.log("StartNotify");
     await rx.startNotifications();
+    console.log("Notify Done");
     rx.addEventListener('characteristicvaluechanged', OnRX);
+    console.log("Eevent listener");
 
     if (status) {
       await status.startNotifications();
       status.addEventListener('characteristicvaluechanged', OnStatus);
     }
+
+    console.log("near end...");
 
     device.addEventListener('gattserverdisconnected', onDisconnectedBLE);
   }
@@ -1457,7 +1461,9 @@ async function GetList(cmd) {
     return [];
   }
   var ret = s.split("\n");
-  ret.pop();  // remove empty line at end
+  if (ret.length && ret[ret.length-1] == "") {
+    ret.pop();  // remove empty line at end
+  }
   return ret;
 }
 
@@ -1540,7 +1546,7 @@ async function Loop() {
       for (var i = 0; i < style_lines.length; i++) {
 	 // console.log(style_lines[i]);
          var desc = await GetList("describe_named_style "+style_lines[i]);
-	 // console.log(desc);
+         console.log(desc);
 	 // console.log(desc[0]);
 	 var arg_string = desc[0];
 	 var args = arg_string.split(",");
